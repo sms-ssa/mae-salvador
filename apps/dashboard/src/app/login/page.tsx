@@ -3,21 +3,27 @@
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth, type Papel } from "@/lib/auth-context";
-import { ClipboardList, BarChart3, UserPlus } from "lucide-react";
+import { ClipboardList, BarChart3, UserCircle } from "lucide-react";
 
-const ROLES: { papel: Papel; label: string; desc: string; icon: React.ElementType }[] = [
-  { papel: "profissional", label: "Profissional Assistente", desc: "Acompanhamento pré-natal e gestão local das gestantes da equipe", icon: ClipboardList },
-  { papel: "cadastro", label: "Cadastro de Gestante", desc: "Cadastrar novas gestantes no programa Mãe Salvador", icon: UserPlus },
-  { papel: "gestor", label: "Gestão", desc: "Indicadores, relatórios e visão distrital ou central", icon: BarChart3 },
+/** Perfis de acesso conforme documento de requisitos (item 1). */
+const PERFIS: { tipo: "gestante" | "profissional" | "gestao"; label: string; desc: string; icon: React.ElementType }[] = [
+  { tipo: "gestante", label: "Gestante", desc: "Acessar sua caderneta e acompanhamento", icon: UserCircle },
+  { tipo: "profissional", label: "Profissional de Saúde", desc: "Acompanhamento pré-natal e gestão local", icon: ClipboardList },
+  { tipo: "gestao", label: "Gestão", desc: "Distrito Sanitário e Nível Central", icon: BarChart3 },
 ];
 
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
 
-  function handleLogin(papel: Papel) {
+  function handlePerfil(tipo: "gestante" | "profissional" | "gestao") {
+    if (tipo === "gestante") {
+      router.push("/gestante/login");
+      return;
+    }
+    const papel: Papel = tipo === "gestao" ? "gestor" : "profissional";
     login(papel);
-    router.push(papel === "gestor" ? "/gestor" : papel === "cadastro" ? "/cadastrar" : "/painel");
+    router.push(tipo === "gestao" ? "/gestor" : "/painel");
   }
 
   return (
@@ -36,23 +42,24 @@ export default function LoginPage() {
             />
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">
-            Caderneta Digital
+            Programa Mãe Salvador
           </h1>
           <p className="text-sm text-white/50 mt-1">
-            Programa Mãe Salvador &mdash; SMS
+            SMS &mdash; Caderneta Digital
           </p>
         </div>
 
-        {/* Role selection card */}
+        {/* Perfil de Acesso (requisitos: quadro "Perfil de Acesso") */}
         <div className="bg-white/95 backdrop-blur rounded-2xl shadow-2xl shadow-black/20 p-6 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-150">
+          <h2 className="text-center font-semibold text-foreground mb-1">Perfil de Acesso</h2>
           <p className="text-sm text-muted-foreground text-center mb-5">
-            Selecione seu perfil de acesso
+            Selecione o perfil de acesso para continuar
           </p>
           <div className="space-y-2.5">
-            {ROLES.map(({ papel, label, desc, icon: Icon }) => (
+            {PERFIS.map(({ tipo, label, desc, icon: Icon }) => (
               <button
-                key={papel}
-                onClick={() => handleLogin(papel)}
+                key={tipo}
+                onClick={() => handlePerfil(tipo)}
                 className="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl border border-border bg-white hover:bg-primary/5 hover:border-primary/30 transition-all duration-200 text-left group cursor-pointer"
               >
                 <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-200">

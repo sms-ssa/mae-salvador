@@ -9,6 +9,7 @@
   "scripts": {
     "dashboard": "npm run dev --workspace=apps/dashboard",
     "mobile": "npm run start --workspace=apps/mobile",
-    "shared:build": "npm run build --workspace=packages/shared"
+    "shared:build": "npm run build --workspace=packages/shared",
+    "db:migrate": "node database/run-migrations.js"
   }
 }

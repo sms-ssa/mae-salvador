@@ -14,6 +14,156 @@ export type DescobrimentoGestacao = "teste-rapido" | "beta-hcg" | "atraso-menstr
 
 export type ProgramaSocial = "nenhum" | "bolsa-familia" | "bpc-loas" | "aluguel-social" | "outros";
 
+/** Sexo (documento de requisitos: lista suspensa obrigatória). */
+export type Sexo = "FEMININO" | "MASCULINO" | "INDETERMINADO";
+
+/** Identidade de gênero (opcional). */
+export type IdentidadeGenero =
+  | "mulher-cis"
+  | "homem-cis"
+  | "mulher-trans"
+  | "homem-trans"
+  | "travesti"
+  | "pessoa-nao-binaria";
+
+/** Orientação sexual (opcional). */
+export type OrientacaoSexual =
+  | "gay"
+  | "lesbica"
+  | "bissexual"
+  | "pansexual"
+  | "heterossexual"
+  | "assexual";
+
+/** Origem do cadastro: manual ou pesquisa na base federal (CIP). */
+export type OrigemCadastro = "manual" | "cip";
+
+/** Status do cadastro no fluxo do programa. */
+export type StatusCadastro = "pendente" | "aprovado" | "recusado";
+
+// ── Base Federal (contrato de dados da pesquisa CNS/CADWEB) ─────
+
+/**
+ * Contrato da resposta da Base Federal (ex.: CNS – PesquisarPacientePorCPF).
+ * Usado apenas para mapear → modelo local; não persistir dados federais diretamente.
+ */
+export interface PacienteBaseFederal {
+  cpf?: string | null;
+  cns?: string | null;
+  nome?: string | null;
+  nomeMae?: string | null;
+  nomePai?: string | null;
+  dataNascimento?: string | null;
+  sexo?: string | null;
+  logradouro?: string | null;
+  numero?: string | null;
+  complemento?: string | null;
+  bairro?: string | null;
+  cep?: string | null;
+  emails?: string | null;
+  ddd?: string | null;
+}
+
+/**
+ * Resultado da pesquisa na Base Federal (sucesso + paciente ou mensagem de erro).
+ */
+export interface ResultadoPesquisaBaseFederal {
+  sucesso: boolean;
+  paciente?: PacienteBaseFederal | null;
+  mensagem?: string;
+}
+
+// ── Cadastro da Gestante (modelo local – formulário / persistência) ─────
+
+/**
+ * Subconjunto do cadastro que pode ser pré-preenchido a partir da Base Federal.
+ * Apenas dados demográficos e endereço; telefone e demais campos são locais.
+ */
+export interface DadosPessoaisFromFederal {
+  cpf: string;
+  cns?: string;
+  nomeCompleto: string;
+  nomeMae?: string;
+  nomePai?: string;
+  dataNascimento?: string;
+  sexo?: Sexo;
+  logradouro: string;
+  numero: string;
+  complemento?: string;
+  bairro: string;
+  cep: string;
+}
+
+/**
+ * Cadastro da gestante no programa (registro local).
+ * Compatível com formulário 4 páginas e futura tabela gestante/gestante_cadastro.
+ */
+export interface CadastroGestante {
+  id: string;
+  // Identificação (obrigatório: CPF ou CNS; nome completo; nome mãe/pai; data nasc.; sexo; raça; deficiência)
+  cpf: string;
+  cns?: string;
+  nomeCompleto: string;
+  nomeSocial?: string;
+  nomeMae: string;
+  nomePai: string;
+  dataNascimento: string;
+  sexo: Sexo;
+  racaCor: RacaCor;
+  identidadeGenero?: IdentidadeGenero;
+  orientacaoSexual?: OrientacaoSexual;
+  possuiDeficiencia: boolean;
+  deficiencia?: string;
+  nomeSocialPrincipal?: boolean;
+  // Contato
+  telefone: string;
+  temWhatsapp: boolean;
+  email?: string;
+  // Endereço
+  logradouro: string;
+  numero: string;
+  complemento?: string;
+  bairro: string;
+  cep: string;
+  distritoSanitarioId?: string;
+  // Gestação
+  descobrimentoGestacao: DescobrimentoGestacao;
+  dum?: string;
+  programaSocial: ProgramaSocial;
+  nis?: string;
+  planoSaude?: "sim" | "nao";
+  manterAcompanhamentoUbs?: "sim" | "nao";
+  // Vínculo
+  ubsId: string;
+  maternidadeReferencia?: string;
+  cartaoMaeSalvador?: boolean;
+  // Histórico obstétrico (opcional)
+  gestacoesPrevias?: number;
+  partosNormal?: number;
+  partosCesareo?: number;
+  abortos?: number;
+  // Saúde (opcional)
+  alergias?: string;
+  doencasConhecidas?: string;
+  medicacoesEmUso?: string;
+  // Origem e vínculos externos
+  origemCadastro: OrigemCadastro;
+  idCidadaoCip?: number;
+  coCidadaoEsus?: number;
+  // Controle
+  senhaHash?: string;
+  dataCadastro: string;
+  status: StatusCadastro;
+  criadoEm: string;
+  atualizadoEm: string;
+}
+
+/** Payload para criar/atualizar cadastro (sem id, status, criadoEm, atualizadoEm). */
+export type GestanteCadastroInput = Omit<
+  CadastroGestante,
+  "id" | "status" | "criadoEm" | "atualizadoEm"
+>;
+
 // ── Gestante ───────────────────────────────────────────
 
 export interface Gestante {
