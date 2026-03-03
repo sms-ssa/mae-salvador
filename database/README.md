@@ -50,6 +50,17 @@ psql postgresql://usuario:senha@localhost:5432/mae_salvador -f database/migratio
 cd apps/dashboard && node ../../database/run-migrations.js
 ```
 
+## Limpar e reconstruir (dropar tabelas)
+
+Para remover todas as tabelas e rodar as migrations de novo (banco limpo):
+
+```bash
+npm run db:drop
+npm run db:migrate
+```
+
+Ou com psql: `psql "$APP_DATABASE_URL" -f database/drop-tables.sql` (depois rode as migrations).
+
 ## Ordem
 
 1. `001_gestante_cadastro.sql` — Tabela `gestante_cadastro` (cadastro da gestante, origem manual ou CIP).

@@ -27,40 +27,41 @@ ALTER TABLE gestante_cadastro
   ADD COLUMN IF NOT EXISTS ubs_id                 UUID REFERENCES ubs(id);
 
 -- Preencher FKs a partir dos códigos/texto existentes (quando existir correspondência)
+-- Usar comparação explícita TEXT = TEXT para evitar erro "operador não existe: text = uuid"
 UPDATE gestante_cadastro g
 SET identidade_genero_id = ig.id
 FROM identidade_genero ig
-WHERE g.identidade_genero IS NOT NULL AND ig.codigo = g.identidade_genero;
+WHERE g.identidade_genero IS NOT NULL AND ig.codigo::text = g.identidade_genero::text;
 
 UPDATE gestante_cadastro g
 SET orientacao_sexual_id = os.id
 FROM orientacao_sexual os
-WHERE g.orientacao_sexual IS NOT NULL AND os.codigo = g.orientacao_sexual;
+WHERE g.orientacao_sexual IS NOT NULL AND os.codigo::text = g.orientacao_sexual::text;
 
 UPDATE gestante_cadastro g
 SET distrito_sanitario_id = d.id
 FROM distrito_sanitario d
-WHERE g.distrito_sanitario_codigo IS NOT NULL AND d.codigo = g.distrito_sanitario_codigo;
+WHERE g.distrito_sanitario_codigo IS NOT NULL AND d.codigo::text = g.distrito_sanitario_codigo::text;
 
 UPDATE gestante_cadastro g
 SET descobrimento_gestacao_id = dg.id
 FROM descobrimento_gestacao dg
-WHERE g.descobrimento_gestacao IS NOT NULL AND dg.codigo = g.descobrimento_gestacao;
+WHERE g.descobrimento_gestacao IS NOT NULL AND dg.codigo::text = g.descobrimento_gestacao::text;
 
 UPDATE gestante_cadastro g
 SET programa_social_id = ps.id
 FROM programa_social ps
-WHERE g.programa_social IS NOT NULL AND ps.codigo = g.programa_social;
+WHERE g.programa_social IS NOT NULL AND ps.codigo::text = g.programa_social::text;
 
 UPDATE gestante_cadastro g
 SET plano_saude_id = pso.id
 FROM plano_saude_opcao pso
-WHERE g.plano_saude IS NOT NULL AND pso.codigo = g.plano_saude;
+WHERE g.plano_saude IS NOT NULL AND pso.codigo::text = g.plano_saude::text;
 
 UPDATE gestante_cadastro g
 SET ubs_id = u.id
 FROM ubs u
-WHERE g.ubs_codigo IS NOT NULL AND u.codigo = g.ubs_codigo;
+WHERE g.ubs_codigo IS NOT NULL AND u.codigo::text = g.ubs_codigo::text;
 
 -- Índices para buscas por FK
 CREATE INDEX IF NOT EXISTS idx_gestante_cadastro_identidade_genero

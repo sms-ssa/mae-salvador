@@ -10,6 +10,7 @@
     "dashboard": "npm run dev --workspace=apps/dashboard",
     "mobile": "npm run start --workspace=apps/mobile",
     "shared:build": "npm run build --workspace=packages/shared",
+    "db:drop": "node database/run-drop-tables.js",
     "db:migrate": "node database/run-migrations.js"
   }
 }
