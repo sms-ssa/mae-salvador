@@ -39,6 +39,10 @@ function normalizarCpf(cpf: string): string {
 
 const CNS_NAMESPACE = "http://servicos.nti.sms.salvador.ba.br/";
 
+function normalizarCns(cns: string): string {
+  return (cns ?? "").replace(/\D/g, "").slice(0, 15);
+}
+
 function buildSoapEnvelope(cpf: string): string {
   const cpfLimpo = normalizarCpf(cpf);
   return [
@@ -48,6 +52,20 @@ function buildSoapEnvelope(cpf: string): string {
     `    <ns:PesquisarPacientePorCPF xmlns:ns="${CNS_NAMESPACE}">`,
     `      <cpf>${escapeXml(cpfLimpo)}</cpf>`,
     "    </ns:PesquisarPacientePorCPF>",
+    "  </soap:Body>",
+    "</soap:Envelope>",
+  ].join("\n");
+}
+
+function buildSoapEnvelopeCns(cns: string): string {
+  const cnsLimpo = normalizarCns(cns);
+  return [
+    '<?xml version="1.0" encoding="utf-8"?>',
+    '<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">',
+    "  <soap:Body>",
+    `    <ns:PesquisarPacientePorCNS xmlns:ns="${CNS_NAMESPACE}">`,
+    `      <cns>${escapeXml(cnsLimpo)}</cns>`,
+    "    </ns:PesquisarPacientePorCNS>",
     "  </soap:Body>",
     "</soap:Envelope>",
   ].join("\n");
@@ -210,6 +228,106 @@ export async function pesquisarPacientePorCpf(
     bodyXml.match(
       /<PesquisarPacientePorCPFResponse[^>]*>([\s\S]*?)<\/PesquisarPacientePorCPFResponse>/i
     ) ?? bodyXml.match(/<return[^>]*>([\s\S]*?)<\/return>/i);
+
+  const inner = responseTag ? responseTag[1].trim() : bodyXml;
+  const paciente = parsePacienteFromBody(inner);
+
+  return {
+    sucesso: true,
+    paciente,
+  };
+}
+
+/**
+ * Pesquisa paciente na Base Federal do CNS pelo CNS (15 dígitos).
+ * Usado na busca alternativa quando o cidadão não é encontrado por CPF.
+ *
+ * @param cns - CNS com ou sem formatação (apenas 15 dígitos são usados)
+ * @returns Resultado tipado para mapeamento no cadastro local
+ */
+export async function pesquisarPacientePorCns(
+  cns: string
+): Promise<ResultadoPesquisaBaseFederal> {
+  const { url, user, password, configured } = getConfig();
+
+  if (!configured) {
+    return {
+      sucesso: false,
+      paciente: null,
+      mensagem:
+        "Integração CNS Federal não configurada. Defina CNS_FEDERAL_USER e CNS_FEDERAL_PASSWORD.",
+    };
+  }
+
+  const cnsNorm = normalizarCns(cns);
+  if (cnsNorm.length !== 15) {
+    return {
+      sucesso: false,
+      paciente: null,
+      mensagem: "CNS deve conter 15 dígitos.",
+    };
+  }
+
+  const soapEnvelope = buildSoapEnvelopeCns(cnsNorm);
+  const basicAuth = Buffer.from(`${user}:${password}`, "utf-8").toString(
+    "base64"
+  );
+
+  const headers: Record<string, string> = {
+    "Content-Type": "text/xml; charset=utf-8",
+    Authorization: `Basic ${basicAuth}`,
+    SOAPAction: '""',
+  };
+
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers,
+      body: soapEnvelope,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return {
+      sucesso: false,
+      paciente: null,
+      mensagem: `Erro de conexão com o serviço CNS: ${msg}`,
+    };
+  }
+
+  const responseText = await res.text();
+
+  if (!res.ok) {
+    return {
+      sucesso: false,
+      paciente: null,
+      mensagem: `HTTP ${res.status}: ${responseText.slice(0, 500)}`,
+    };
+  }
+
+  const fault = parseSoapFault(responseText);
+  if (fault) {
+    return {
+      sucesso: false,
+      paciente: null,
+      mensagem: fault,
+    };
+  }
+
+  const bodyXml = extractSoapBody(responseText);
+  if (!bodyXml) {
+    return {
+      sucesso: false,
+      paciente: null,
+      mensagem: "Resposta SOAP inválida: Body não encontrado.",
+    };
+  }
+
+  const responseTag =
+    bodyXml.match(
+      /<PesquisarPacientePorCNSResponse[^>]*>([\s\S]*?)<\/PesquisarPacientePorCNSResponse>/i
+    ) ?? bodyXml.match(/<PesquisarPacientePorCpfResponse[^>]*>([\s\S]*?)<\/PesquisarPacientePorCpfResponse>/i)
+    ?? bodyXml.match(/<return[^>]*>([\s\S]*?)<\/return>/i);
 
   const inner = responseTag ? responseTag[1].trim() : bodyXml;
   const paciente = parsePacienteFromBody(inner);

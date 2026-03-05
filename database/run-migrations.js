@@ -67,6 +67,8 @@ async function main() {
     "001_gestante_cadastro.sql",
     "002_tabelas_dominio.sql",
     "003_gestante_cadastro_fks.sql",
+    "004_cadastro_gestante_contatos_endereco.sql",
+    "005_gestante_municipio_nascimento.sql",
   ];
 
   try {

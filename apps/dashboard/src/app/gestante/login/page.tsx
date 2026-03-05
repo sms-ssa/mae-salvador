@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -22,6 +22,17 @@ export default function GestanteLoginPage() {
   const [erroSenha, setErroSenha] = useState("");
   const [notificacao, setNotificacao] = useState("");
   const [carregando, setCarregando] = useState(false);
+
+  // Mensagem ao redirecionar da Pesquisa do Cidadão (já existe usuário com CPF/CNS)
+  useEffect(() => {
+    try {
+      const flash = sessionStorage.getItem("gestante_login_flash");
+      if (flash) {
+        sessionStorage.removeItem("gestante_login_flash");
+        setNotificacao(flash);
+      }
+    } catch (_) {}
+  }, []);
 
   async function handleEntrar() {
     setErroCpfCns("");

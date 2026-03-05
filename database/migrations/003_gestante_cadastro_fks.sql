@@ -3,18 +3,33 @@
 --  Migration 003: Adiciona FKs para tabelas de domínio em gestante_cadastro.
 --  Executar após 002_tabelas_dominio.sql.
 --  Formulário passa a enviar IDs; aplicação grava nas colunas *_id (UUID).
+--  Idempotente: safe re-run (só renomeia se coluna *_codigo ainda não existir).
 -- ════════════════════════════════════════════════════════════════
 
--- Renomear colunas TEXT que viram FK para *_codigo (mantém valor legado)
-ALTER TABLE gestante_cadastro
-  RENAME COLUMN distrito_sanitario_id TO distrito_sanitario_codigo;
+-- Renomear colunas TEXT que viram FK para *_codigo (só se ainda não foram renomeadas)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'gestante_cadastro' AND column_name = 'distrito_sanitario_id')
+     AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'gestante_cadastro' AND column_name = 'distrito_sanitario_codigo') THEN
+    ALTER TABLE gestante_cadastro RENAME COLUMN distrito_sanitario_id TO distrito_sanitario_codigo;
+  END IF;
+END $$;
 
-ALTER TABLE gestante_cadastro
-  RENAME COLUMN ubs_id TO ubs_codigo;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'gestante_cadastro' AND column_name = 'ubs_id')
+     AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'gestante_cadastro' AND column_name = 'ubs_codigo') THEN
+    ALTER TABLE gestante_cadastro RENAME COLUMN ubs_id TO ubs_codigo;
+  END IF;
+END $$;
 
--- Permitir que novos cadastros usem só ubs_id (UUID); ubs_codigo fica para legado
-ALTER TABLE gestante_cadastro
-  ALTER COLUMN ubs_codigo DROP NOT NULL;
+-- Permitir que novos cadastros usem só ubs_id (UUID); ubs_codigo fica para legado (só altera se coluna existir)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'gestante_cadastro' AND column_name = 'ubs_codigo') THEN
+    ALTER TABLE gestante_cadastro ALTER COLUMN ubs_codigo DROP NOT NULL;
+  END IF;
+END $$;
 
 -- Adicionar colunas FK (normalizadas)
 ALTER TABLE gestante_cadastro

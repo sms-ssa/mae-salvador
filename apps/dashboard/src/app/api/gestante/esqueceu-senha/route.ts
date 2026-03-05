@@ -8,17 +8,37 @@ function onlyDigits(s: string, maxLen: number): string {
 }
 
 const challenges = new Map<string, { correctId: string; perguntaId: string }>();
-const tentativasErradas = new Map<string, number>();
+/** Contagem de erros por CPF/CNS; ao atingir 3, bloqueia até o dia seguinte (doc Recuperação de Senha). */
+const tentativasErradas = new Map<string, { count: number; blockedUntil: number }>();
 const tokensRedefinir = new Map<string, { cpfCns: string; expires: number }>();
 
 const TENTATIVAS_MAX = 3;
 const TOKEN_VALIDADE_MS = 15 * 60 * 1000;
+
+/** Retorna o timestamp do início do próximo dia (00:00 UTC) para bloqueio "até o dia seguinte". */
+function getProximoDiaUTC(): number {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + 1);
+  d.setUTCHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+function isBloqueado(cpfCns: string): boolean {
+  const entry = tentativasErradas.get(cpfCns);
+  if (!entry) return false;
+  if (Date.now() >= entry.blockedUntil) {
+    tentativasErradas.delete(cpfCns);
+    return false;
+  }
+  return entry.count >= TENTATIVAS_MAX;
+}
 
 function gerarOpcoes(correta: string, tipo: string): { id: string; texto: string }[] {
   const opcoesFalsas: Record<string, string[]> = {
     nome: ["Ana Maria Santos", "Fernanda Oliveira", "Carla Souza Lima", "Patrícia Costa", "Juliana Ferreira"],
     nomeMae: ["Maria da Silva", "Ana Paula Oliveira", "Francisca Santos", "Tereza Costa", "Antônia Lima"],
     data: ["1990-05-15", "1988-11-20", "1992-03-10", "1985-07-22", "1995-01-08"],
+    municipioNascimento: ["Feira de Santana", "Vitória da Conquista", "Camaçari", "Lauro de Freitas", "Ilhéus", "Juazeiro", "Itabuna", "Alagoinhas"],
   };
   const falsas = (opcoesFalsas[tipo] ?? opcoesFalsas.nome).filter((x) => x !== correta);
   while (falsas.length < 2) falsas.push(`Opção ${falsas.length + 1}`);
@@ -45,16 +65,15 @@ export async function GET(request: NextRequest) {
       { status: 400 }
     );
   }
-  const tentativas = tentativasErradas.get(cpfCns) ?? 0;
-  if (tentativas >= TENTATIVAS_MAX) {
+  if (isBloqueado(cpfCns)) {
     return NextResponse.json(
       { erro: "Limite de tentativas alcançado. Tente novamente amanhã!" },
       { status: 429 }
     );
   }
   const pool = getAppPool();
-  const res = await pool.query<{ nome_completo: string; nome_mae: string | null; data_nascimento: Date | null }>(
-    `SELECT nome_completo, nome_mae, data_nascimento FROM gestante_cadastro
+  const res = await pool.query<{ nome_completo: string; nome_mae: string | null; data_nascimento: Date | null; municipio_nascimento: string | null }>(
+    `SELECT nome_completo, nome_mae, data_nascimento, municipio_nascimento FROM gestante_cadastro
      WHERE (LENGTH($1) = 11 AND REPLACE(REPLACE(REPLACE(COALESCE(cpf, '')::text, '.'::text, ''::text), '-'::text, ''::text), ' '::text, ''::text) = $1)
         OR (LENGTH($1) = 15 AND cns IS NOT NULL AND REPLACE(REPLACE(REPLACE(COALESCE(cns, '')::text, '.'::text, ''::text), '-'::text, ''::text), ' '::text, ''::text) = $1)
      LIMIT 1`,
@@ -67,6 +86,7 @@ export async function GET(request: NextRequest) {
       { status: 404 }
     );
   }
+  const municipioNasc = (row.municipio_nascimento ?? "").trim();
   const tipos = [
     { id: "nome", pergunta: "Qual o nome completo cadastrado?", valor: row.nome_completo ?? "" },
     { id: "nomeMae", pergunta: "Qual o nome da mãe?", valor: (row.nome_mae ?? "").trim() },
@@ -75,6 +95,7 @@ export async function GET(request: NextRequest) {
       pergunta: "Qual a data de nascimento?",
       valor: row.data_nascimento ? row.data_nascimento.toISOString().slice(0, 10) : "",
     },
+    { id: "municipioNascimento", pergunta: "Qual o município de nascimento?", valor: municipioNasc },
   ].filter((t) => t.valor && t.valor !== "IGNORADA" && t.valor !== "IGNORADO");
   if (tipos.length === 0) {
     return NextResponse.json(
@@ -114,8 +135,7 @@ export async function POST(request: NextRequest) {
     if (!cpfCns || !opcaoId) {
       return NextResponse.json({ ok: false, erro: "CPF/CNS e opção são obrigatórios." }, { status: 400 });
     }
-    const tentativas = tentativasErradas.get(cpfCns) ?? 0;
-    if (tentativas >= TENTATIVAS_MAX) {
+    if (isBloqueado(cpfCns)) {
       return NextResponse.json(
         { ok: false, erro: "Limite de tentativas alcançado. Tente novamente amanhã!" },
         { status: 429 }
@@ -126,11 +146,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, erro: "Solicite uma nova pergunta (informe CPF/CNS novamente)." }, { status: 400 });
     }
     if (opcaoId !== challenge.correctId) {
-      const nova = tentativas + 1;
-      tentativasErradas.set(cpfCns, nova);
+      const entry = tentativasErradas.get(cpfCns);
+      const count = (entry?.count ?? 0) + 1;
+      const blockedUntil = count >= TENTATIVAS_MAX ? getProximoDiaUTC() : 0;
+      tentativasErradas.set(cpfCns, { count, blockedUntil });
       challenges.delete(cpfCns);
       return NextResponse.json(
-        { ok: false, erro: nova >= TENTATIVAS_MAX ? "Limite de tentativas alcançado. Tente novamente amanhã!" : "Resposta incorreta. Tente novamente." },
+        { ok: false, erro: count >= TENTATIVAS_MAX ? "Limite de tentativas alcançado. Tente novamente amanhã!" : "Resposta incorreta. Tente novamente." },
         { status: 400 }
       );
     }

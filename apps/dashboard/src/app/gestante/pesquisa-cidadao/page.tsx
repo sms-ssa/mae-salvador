@@ -57,8 +57,10 @@ export default function PesquisaCidadaoPage() {
       const verificarRes = await fetch(`/api/gestante/verificar?cpf=${encodeURIComponent(dig)}`);
       const verificarData = await verificarRes.json().catch(() => ({}));
       if (verificarRes.ok && verificarData.existe) {
-        setCadastroJaExiste(true);
-        setNotificacao("Cadastro já existe com este CPF. Faça login ou use Esqueceu Senha.");
+        try {
+          sessionStorage.setItem("gestante_login_flash", "Já existe um usuário com o CPF/CNS informado. Acesse sua conta");
+        } catch (_) {}
+        router.push("/gestante/login");
         setCarregando(false);
         return;
       }
@@ -108,8 +110,20 @@ export default function PesquisaCidadaoPage() {
       const verificarRes = await fetch(`/api/gestante/verificar?cns=${encodeURIComponent(dig)}`);
       const verificarData = await verificarRes.json().catch(() => ({}));
       if (verificarData.existe) {
-        setCadastroJaExiste(true);
-        setNotificacao("Cadastro já existe com este CNS. Faça login ou use Esqueceu Senha.");
+        try {
+          sessionStorage.setItem("gestante_login_flash", "Já existe um usuário com o CPF/CNS informado. Acesse sua conta");
+        } catch (_) {}
+        router.push("/gestante/login");
+        setCarregando(false);
+        return;
+      }
+      const res = await fetch(`/api/cns/buscar?cns=${encodeURIComponent(dig)}`);
+      const data = await res.json().catch(() => ({}));
+      if (data.sucesso && data.paciente) {
+        try {
+          sessionStorage.setItem("cnsPaciente", JSON.stringify(data.paciente));
+        } catch (_) {}
+        router.push("/gestante/cadastrar?fromCns=1");
       } else {
         router.push("/gestante/cadastrar");
       }
@@ -157,10 +171,22 @@ export default function PesquisaCidadaoPage() {
       });
       const verificarData = await verificarRes.json().catch(() => ({}));
       if (verificarData.existe) {
-        setCadastroJaExiste(true);
-        setNotificacao("Cadastro já existe com estes dados. Faça login ou use Esqueceu Senha.");
+        try {
+          sessionStorage.setItem("gestante_login_flash", "Já existe um usuário com o CPF/CNS informado. Acesse sua conta");
+        } catch (_) {}
+        router.push("/gestante/login");
       } else {
-        router.push("/gestante/cadastrar");
+        try {
+          sessionStorage.setItem(
+            "dadosPacienteBuscaAlt",
+            JSON.stringify({
+              nomeCompleto: nomeCompletoAlt.trim(),
+              nomeMae: nomeMaeAlt.trim() || undefined,
+              dataNascimento: dataNascAlt.trim() || undefined,
+            })
+          );
+        } catch (_) {}
+        router.push("/gestante/cadastrar?fromDados=1");
       }
     } catch (_) {
       router.push("/gestante/cadastrar");
