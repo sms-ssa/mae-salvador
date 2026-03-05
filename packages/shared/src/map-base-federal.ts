@@ -9,7 +9,7 @@
  * - Sexo: texto livre da federal → enum Sexo (FEMININO, MASCULINO, INDETERMINADO).
  */
 
-import type { PacienteBaseFederal, DadosPessoaisFromFederal, Sexo } from "./types";
+import type { PacienteBaseFederal, DadosPessoaisFromFederal, Sexo, CitizenDto } from "./types";
 
 function trim(s: string | null | undefined): string {
   return (s ?? "").trim();
@@ -85,4 +85,31 @@ export function mapPacienteBaseFederalToDadosCadastro(
   if (cep.length === 8) out.cep = cep;
 
   return out;
+}
+
+/**
+ * Converte CitizenDto (e-SUS ou SOAP) para PacienteBaseFederal.
+ * Mantém o contrato da API /api/cns/buscar para o frontend usar mapPacienteBaseFederalToDadosCadastro.
+ */
+export function citizenDtoToPacienteBaseFederal(
+  dto: CitizenDto | null | undefined
+): PacienteBaseFederal | null {
+  if (!dto) return null;
+  const trim = (s: string | null | undefined) => (s ?? "").trim() || undefined;
+  return {
+    cpf: trim(dto.cpf) ?? undefined,
+    cns: trim(dto.cns) ?? undefined,
+    nome: trim(dto.nomeCompleto) ?? undefined,
+    nomeMae: trim(dto.nomeMae) ?? undefined,
+    nomePai: trim(dto.nomePai) ?? undefined,
+    dataNascimento: trim(dto.dataNascimento) ?? undefined,
+    sexo: trim(dto.sexo) ?? undefined,
+    logradouro: trim(dto.logradouro) ?? undefined,
+    numero: trim(dto.numero) ?? undefined,
+    complemento: trim(dto.complemento) ?? undefined,
+    bairro: trim(dto.bairro) ?? undefined,
+    cep: trim(dto.cep) ?? undefined,
+    emails: trim(dto.email) ?? undefined,
+    ddd: trim(dto.telefoneCelular)?.slice(0, 2) ?? undefined,
+  };
 }

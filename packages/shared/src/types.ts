@@ -73,6 +73,41 @@ export interface ResultadoPesquisaBaseFederal {
   mensagem?: string;
 }
 
+// ── DTO único para busca de cidadão (e-SUS ou SOAP/CADSUS) ─────
+
+/**
+ * DTO único do cidadão retornado por qualquer provider (e-SUS ou SOAP).
+ * Usado pelo CitizenLookupService para preencher o formulário de cadastro da gestante.
+ */
+export interface CitizenDto {
+  cpf?: string | null;
+  cns?: string | null;
+  nomeCompleto?: string | null;
+  nomeSocial?: string | null;
+  nomeMae?: string | null;
+  nomePai?: string | null;
+  dataNascimento?: string | null;
+  sexo?: string | null;
+  racaCor?: string | null;
+  identidadeGenero?: string | null;
+  orientacaoSexual?: string | null;
+  nis?: string | null;
+  telefoneCelular?: string | null;
+  telefoneResidencial?: string | null;
+  email?: string | null;
+  cep?: string | null;
+  logradouro?: string | null;
+  numero?: string | null;
+  complemento?: string | null;
+  bairro?: string | null;
+  pontoReferencia?: string | null;
+  municipio?: string | null;
+  unidadeSaude?: string | null;
+  equipeSaude?: string | null;
+  possuiHistoricoPreNatal?: boolean;
+  dataUltimoAtendimentoPreNatal?: string | null;
+}
+
 // ── Cadastro da Gestante (modelo local – formulário / persistência) ─────
 
 /**

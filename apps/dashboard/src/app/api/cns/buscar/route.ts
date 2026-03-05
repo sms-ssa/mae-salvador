@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  pesquisarPacientePorCpf,
-  pesquisarPacientePorCns,
-  isCnsFederalConfigured,
-} from "@/lib/cns-federal";
+import { citizenDtoToPacienteBaseFederal } from "@mae-salvador/shared";
+import { isCnsFederalConfigured } from "@/lib/cns-federal";
+import { getCitizenByCpfOrCns } from "@/lib/citizen-lookup-service";
 
 /**
  * GET /api/cns/buscar?cpf=... ou ?cns=...
  *
- * Consulta dados do cidadão na Base Federal do CNS (CADWEB/PEC).
- * - cpf: 11 dígitos → PesquisarPacientePorCPF
- * - cns: 15 dígitos → PesquisarPacientePorCNS (busca alternativa)
- *
+ * Busca cidadão: 1) e-SUS (SQL Server), 2) CADSUS SOAP se não encontrar.
  * Resposta: ResultadoPesquisaBaseFederal (sucesso, paciente?, mensagem?).
  * Use mapPacienteBaseFederalToDadosCadastro(@mae-salvador/shared) para pré-preencher o cadastro.
  */
@@ -19,6 +14,16 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const cpf = searchParams.get("cpf")?.trim();
   const cns = searchParams.get("cns")?.trim();
+
+  const doc = cns && cns.replace(/\D/g, "").length === 15 ? cns : cpf;
+  if (!doc?.trim()) {
+    return NextResponse.json({
+      cnsConfigurado: isCnsFederalConfigured(),
+      sucesso: false,
+      paciente: null,
+      mensagem: "Informe o parâmetro cpf ou cns na query string.",
+    });
+  }
 
   if (!isCnsFederalConfigured()) {
     return NextResponse.json({
@@ -30,41 +35,21 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  if (cns && cns.replace(/\D/g, "").length === 15) {
-    try {
-      const resultado = await pesquisarPacientePorCns(cns);
+  try {
+    const citizen = await getCitizenByCpfOrCns(doc);
+    const paciente = citizenDtoToPacienteBaseFederal(citizen);
+    if (paciente) {
       return NextResponse.json({
         cnsConfigurado: true,
-        ...resultado,
+        sucesso: true,
+        paciente,
       });
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      return NextResponse.json(
-        {
-          cnsConfigurado: true,
-          sucesso: false,
-          paciente: null,
-          mensagem: message,
-        },
-        { status: 500 }
-      );
     }
-  }
-
-  if (!cpf || !cpf.trim()) {
     return NextResponse.json({
       cnsConfigurado: true,
       sucesso: false,
       paciente: null,
-      mensagem: "Informe o parâmetro cpf ou cns na query string.",
-    });
-  }
-
-  try {
-    const resultado = await pesquisarPacientePorCpf(cpf);
-    return NextResponse.json({
-      cnsConfigurado: true,
-      ...resultado,
+      mensagem: "Cidadão não encontrado na base e-SUS nem no CADSUS.",
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);

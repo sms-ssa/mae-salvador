@@ -124,7 +124,7 @@ function parsePacienteFromBody(bodyXml: string): PacienteBaseFederal {
     : null;
   return {
     cpf: get("cpf", "CPF") ?? undefined,
-    cns: get("cns", "CNS") ?? undefined,
+    cns: get("cns", "CNS", "nu_cns", "numeroCns", "NuCns") ?? undefined,
     nome: get("nome", "Nome", "nomePaciente") ?? undefined,
     nomeMae: get("nomeMae", "NomeMae", "nome_mae") ?? undefined,
     nomePai: get("nomePai", "NomePai", "nome_pai") ?? undefined,
