@@ -145,6 +145,7 @@ export function useCadastroGestante() {
         const paciente = JSON.parse(raw) as Parameters<typeof mapPacienteBaseFederalToDadosCadastro>[0];
         sessionStorage.removeItem(CNS_PACIENTE_KEY);
         const dados = mapPacienteBaseFederalToDadosCadastro(paciente);
+        const racaCorFederal = (dados as Record<string, unknown>).racaCor as string | undefined;
         setPacienteLocalizado(true);
         setForm((prev) => ({
           ...prev,
@@ -155,7 +156,7 @@ export function useCadastroGestante() {
           nomePai: dados.nomePai ?? prev.nomePai,
           dataNascimento: dados.dataNascimento ?? prev.dataNascimento,
           sexo: dados.sexo ?? prev.sexo,
-          racaCor: dados.racaCor ? String(dados.racaCor).toUpperCase() : prev.racaCor,
+          racaCor: racaCorFederal ? String(racaCorFederal).toUpperCase() : prev.racaCor,
           logradouro: dados.logradouro ?? prev.logradouro,
           numero: dados.numero && (dados.numero.toUpperCase() === "S/N" || dados.numero === "s/n") ? "" : (dados.numero ?? prev.numero),
           numeroSemNumero: !!(dados.numero && (dados.numero.toUpperCase() === "S/N" || dados.numero === "s/n")),
