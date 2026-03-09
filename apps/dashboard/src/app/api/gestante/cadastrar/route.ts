@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAppPool, isAppDatabaseConfigured } from "@/lib/db";
+import { insertGestanteCadastro } from "@/lib/repositories/gestante.repository";
 import { hashSenha } from "@/lib/senha";
 
 function onlyDigits(s: string | null | undefined, maxLen: number): string {
@@ -186,90 +187,65 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const senhaHash = senha ? hashSenha(senha) : null;
+  const racaCorDb = racaCor && ["BRANCA", "PARDA", "PRETA", "AMARELA", "INDIGENA"].includes(racaCor) ? racaCor : null;
+  const sexoDb = sexo && ["FEMININO", "MASCULINO", "INDETERMINADO"].includes(sexo) ? sexo : null;
+
   const pool = getAppPool();
   try {
-    // Formulário envia códigos (ex.: "ds-01", "ubs-001"); após migration 003 as colunas são UUID (FK)
-    const distritoRow = distritoSanitarioId
-      ? await pool.query<{ id: string }>("SELECT id FROM distrito_sanitario WHERE codigo = $1", [distritoSanitarioId])
-      : { rows: [] };
-    const ubsRow = await pool.query<{ id: string }>("SELECT id FROM ubs WHERE codigo = $1", [ubsId]);
-    const distritoUuid = distritoRow.rows[0]?.id ?? null;
-    const ubsUuid = ubsRow.rows[0]?.id ?? null;
-    if (!ubsUuid) {
+    const id = await insertGestanteCadastro(pool, {
+      cpf: cpfInserir,
+      cns: cnsRaw || null,
+      nomeCompleto,
+      nomeMae,
+      nomePai,
+      dataNascimento,
+      municipioNascimento,
+      telefone,
+      temWhatsapp,
+      email,
+      telefoneAlternativo,
+      telefoneResidencial,
+      nomeSocial,
+      nomeSocialPrincipal,
+      identidadeGenero,
+      orientacaoSexual,
+      racaCor: racaCorDb,
+      sexo: sexoDb,
+      possuiDeficiencia,
+      deficiencia,
+      tipoLogradouro,
+      logradouro,
+      numero,
+      complemento,
+      bairro,
+      cep: cepRaw,
+      municipio,
+      pontoReferencia,
+      distritoSanitarioId,
+      descobrimentoGestacao,
+      dum,
+      programaSocial,
+      nis,
+      planoSaude,
+      manterAcompanhamentoUbs,
+      ubsId,
+      gestacoesPrevias,
+      partosNormal,
+      partosCesareo,
+      abortos,
+      alergias,
+      doencasConhecidas,
+      medicacoesEmUso,
+      origemCadastro,
+      senhaHash,
+    });
+    if (id === null) {
       return NextResponse.json(
         { ok: false, erro: "UBS de vinculação não encontrada. Selecione uma UBS válida." },
         { status: 400 }
       );
     }
-
-    const senhaHash = senha ? hashSenha(senha) : null;
-    const racaCorDb = racaCor && ["BRANCA", "PARDA", "PRETA", "AMARELA", "INDIGENA"].includes(racaCor) ? racaCor : null;
-    const sexoDb = sexo && ["FEMININO", "MASCULINO", "INDETERMINADO"].includes(sexo) ? sexo : null;
-
-    const res = await pool.query(
-      `INSERT INTO gestante_cadastro (
-        cpf, cns, nome_completo, nome_mae, nome_pai, data_nascimento, municipio_nascimento,
-        telefone, tem_whatsapp, email, telefone_alternativo, telefone_residencial,
-        nome_social, nome_social_principal, identidade_genero, orientacao_sexual,
-        raca_cor, sexo, possui_deficiencia, deficiencia,
-        tipo_logradouro, logradouro, numero, complemento, bairro, cep, municipio, ponto_referencia, distrito_sanitario_id,
-        descobrimento_gestacao, dum, programa_social, nis, plano_saude, manter_acompanhamento_ubs,
-        ubs_id, gestacoes_previas, partos_normal, partos_cesareo, abortos,
-        alergias, doencas_conhecidas, medicacoes_em_uso, origem_cadastro, senha_hash
-      ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
-        $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33,
-        $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44, $45
-      ) RETURNING id`,
-      [
-        cpfInserir,
-        cnsRaw || null,
-        nomeCompleto,
-        nomeMae,
-        nomePai,
-        dataNascimento,
-        municipioNascimento,
-        telefone,
-        temWhatsapp,
-        email,
-        telefoneAlternativo,
-        telefoneResidencial,
-        nomeSocial,
-        nomeSocialPrincipal,
-        identidadeGenero,
-        orientacaoSexual,
-        racaCorDb,
-        sexoDb,
-        possuiDeficiencia,
-        deficiencia,
-        tipoLogradouro,
-        logradouro,
-        numero,
-        complemento,
-        bairro,
-        cepRaw,
-        municipio,
-        pontoReferencia,
-        distritoUuid,
-        descobrimentoGestacao,
-        dum,
-        programaSocial,
-        nis,
-        planoSaude,
-        manterAcompanhamentoUbs,
-        ubsUuid,
-        gestacoesPrevias,
-        partosNormal,
-        partosCesareo,
-        abortos,
-        alergias,
-        doencasConhecidas,
-        medicacoesEmUso,
-        origemCadastro,
-        senhaHash,
-      ]
-    );
-    const id = res.rows[0]?.id ?? null;
     return NextResponse.json({ ok: true, id });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

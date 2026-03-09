@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RiskBadge } from "@/components/risk-badge";
+import { RiskBadge } from "@/features/gestante/components";
 import { Search, ChevronRight } from "lucide-react";
 import { MOCK_GESTANTES, MOCK_CONSULTAS, MOCK_PROFISSIONAIS, UBS_LIST } from "@mae-salvador/shared";
 import type { RiscoGestacional } from "@mae-salvador/shared";

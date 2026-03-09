@@ -7,26 +7,28 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { RiskBadge } from "@/components/risk-badge";
+import { RiskBadge, TranscardTab } from "@/features/gestante/components";
+import { useGestanteDetail } from "@/features/gestante/hooks/useGestanteDetail";
 import { ArrowLeft, ClipboardPlus, Calendar, Droplets, Syringe, Pill, User, CreditCard, GraduationCap, Building } from "lucide-react";
-import { TranscardTab } from "@/components/transcard-tab";
-import { MOCK_GESTANTES, MOCK_CONSULTAS, MOCK_EXAMES, MOCK_VACINAS, MOCK_MEDICACOES, MOCK_PROFISSIONAIS, MOCK_TRANSCARD, MOCK_ATIVIDADES_EDUCATIVAS, MOCK_VISITAS_MATERNIDADE, UBS_LIST } from "@mae-salvador/shared";
-
-function fmt(iso: string) {
-  return new Date(iso).toLocaleDateString("pt-BR");
-}
-
-function getProfNome(id: string) {
-  return MOCK_PROFISSIONAIS.find((p) => p.id === id)?.nomeCompleto ?? id;
-}
-
-function getUbsNome(id: string) {
-  return UBS_LIST.find((u) => u.id === id)?.nome ?? id;
-}
 
 export default function GestanteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const g = MOCK_GESTANTES.find((g) => g.id === id);
+  const {
+    gestante: g,
+    consultas,
+    exames,
+    vacinas,
+    medicacoes,
+    transcard,
+    atividades,
+    visitas,
+    consultasRealizadas,
+    testesRapidosFeitos,
+    vacinasAtualizadas,
+    getUbsNome,
+    getProfNome,
+    fmt,
+  } = useGestanteDetail(id);
 
   if (!g) {
     return (
@@ -35,19 +37,6 @@ export default function GestanteDetailPage({ params }: { params: Promise<{ id: s
       </div>
     );
   }
-
-  const consultas = MOCK_CONSULTAS.filter((c) => c.gestanteId === id).sort((a, b) => b.data.localeCompare(a.data));
-  const exames = MOCK_EXAMES.filter((e) => e.gestanteId === id).sort((a, b) => b.dataSolicitacao.localeCompare(a.dataSolicitacao));
-  const vacinas = MOCK_VACINAS.filter((v) => v.gestanteId === id);
-  const medicacoes = MOCK_MEDICACOES.filter((m) => m.gestanteId === id);
-  const transcard = MOCK_TRANSCARD.find((t) => t.gestanteId === id);
-  const atividades = MOCK_ATIVIDADES_EDUCATIVAS.filter((a) => a.gestanteId === id).sort((a, b) => b.data.localeCompare(a.data));
-  const visitas = MOCK_VISITAS_MATERNIDADE.filter((v) => v.gestanteId === id).sort((a, b) => b.data.localeCompare(a.data));
-
-  const consultasRealizadas = consultas.filter((c) => c.status === "realizada").length;
-  const testesRapidosFeitos = exames.some((e) => e.nome.toLowerCase().includes("sífilis") && e.status === "resultado-disponivel")
-    && exames.some((e) => e.nome.toLowerCase().includes("hiv") && e.status === "resultado-disponivel");
-  const vacinasAtualizadas = vacinas.filter((v) => v.status === "aplicada").length >= 2;
 
   return (
     <div className="space-y-6">

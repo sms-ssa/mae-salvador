@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RiskBadge } from "@/components/risk-badge";
+import { RiskBadge } from "@/features/gestante/components";
 import {
   Users, Calendar, Syringe, ClipboardCheck, TrendingUp, TrendingDown,
   CreditCard, BarChart3, ShieldAlert, Eye, Pill, HeartPulse, Baby, AlertTriangle,
