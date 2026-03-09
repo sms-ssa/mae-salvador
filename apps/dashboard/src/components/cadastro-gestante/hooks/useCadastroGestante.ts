@@ -53,6 +53,8 @@ const INITIAL_FORM: FormCadastroGestante = {
   ddd: "",
   celularPrincipal: "",
   telefoneAlternativo: "",
+  temWhatsappAlternativo: false,
+  dddResidencial: "",
   telefoneResidencial: "",
   email: "",
   temWhatsapp: false,
@@ -104,6 +106,7 @@ export function useCadastroGestante() {
   const [mostrarConfirmacao, setMostrarConfirmacao] = useState(false);
   const [confirmacaoCarregando, setConfirmacaoCarregando] = useState(false);
   const [confirmacaoData, setConfirmacaoData] = useState<ConfirmacaoData>(null);
+  const [pacienteLocalizado, setPacienteLocalizado] = useState(false);
 
   const updateField = useCallback(<K extends keyof FormCadastroGestante>(key: K, value: FormCadastroGestante[K]) => {
     setForm((prev) => {
@@ -142,6 +145,7 @@ export function useCadastroGestante() {
         const paciente = JSON.parse(raw) as Parameters<typeof mapPacienteBaseFederalToDadosCadastro>[0];
         sessionStorage.removeItem(CNS_PACIENTE_KEY);
         const dados = mapPacienteBaseFederalToDadosCadastro(paciente);
+        setPacienteLocalizado(true);
         setForm((prev) => ({
           ...prev,
           cpf: dados.cpf ? formatCpfValue(dados.cpf) : prev.cpf,
@@ -151,6 +155,7 @@ export function useCadastroGestante() {
           nomePai: dados.nomePai ?? prev.nomePai,
           dataNascimento: dados.dataNascimento ?? prev.dataNascimento,
           sexo: dados.sexo ?? prev.sexo,
+          racaCor: dados.racaCor ? String(dados.racaCor).toUpperCase() : prev.racaCor,
           logradouro: dados.logradouro ?? prev.logradouro,
           numero: dados.numero && (dados.numero.toUpperCase() === "S/N" || dados.numero === "s/n") ? "" : (dados.numero ?? prev.numero),
           numeroSemNumero: !!(dados.numero && (dados.numero.toUpperCase() === "S/N" || dados.numero === "s/n")),
@@ -227,15 +232,25 @@ export function useCadastroGestante() {
         setCepBuscando(false);
         return;
       }
-      const log = (data.logradouro ?? "").trim();
+      const logCompleto = (data.logradouro ?? "").trim();
       let tipoLogradouro = "";
-      if (/^Rua\s/i.test(log)) tipoLogradouro = "Rua";
-      else if (/^Avenida\s/i.test(log)) tipoLogradouro = "Avenida";
-      else if (/^Praça\s/i.test(log)) tipoLogradouro = "Praça";
-      else if (/^Travessa\s/i.test(log)) tipoLogradouro = "Travessa";
+      let logradouroSemTipo = logCompleto;
+      if (/^Rua\s+/i.test(logCompleto)) {
+        tipoLogradouro = "Rua";
+        logradouroSemTipo = logCompleto.replace(/^Rua\s+/i, "").trim();
+      } else if (/^Avenida\s+/i.test(logCompleto)) {
+        tipoLogradouro = "Avenida";
+        logradouroSemTipo = logCompleto.replace(/^Avenida\s+/i, "").trim();
+      } else if (/^Praça\s+/i.test(logCompleto)) {
+        tipoLogradouro = "Praça";
+        logradouroSemTipo = logCompleto.replace(/^Praça\s+/i, "").trim();
+      } else if (/^Travessa\s+/i.test(logCompleto)) {
+        tipoLogradouro = "Travessa";
+        logradouroSemTipo = logCompleto.replace(/^Travessa\s+/i, "").trim();
+      }
       setForm((prev) => ({
         ...prev,
-        logradouro: log,
+        logradouro: logradouroSemTipo || logCompleto,
         bairro: (data.bairro ?? "").trim(),
         municipio: localidade,
         tipoLogradouro,
@@ -293,7 +308,13 @@ export function useCadastroGestante() {
         municipioNascimento: form.municipioNascimento.trim() || undefined,
         telefone: telefoneCompleto,
         telefoneAlternativo: form.telefoneAlternativo.replace(/\D/g, "").slice(0, 11) || undefined,
-        telefoneResidencial: form.telefoneResidencial.replace(/\D/g, "").slice(0, 8) || undefined,
+        temWhatsappAlternativo: form.temWhatsappAlternativo,
+        telefoneResidencial: (() => {
+          const dddR = form.dddResidencial.replace(/\D/g, "").slice(0, 2);
+          const numR = form.telefoneResidencial.replace(/\D/g, "").slice(0, 8);
+          if (dddR.length === 2 && numR.length === 8) return dddR + numR;
+          return numR ? form.telefoneResidencial.replace(/\D/g, "").slice(0, 8) : undefined;
+        })(),
         email: form.email.trim() || undefined,
         temWhatsapp: form.temWhatsapp,
         nomeSocial: form.nomeSocial.trim() || undefined,
@@ -312,13 +333,12 @@ export function useCadastroGestante() {
         cep: cepDigits,
         municipio: form.municipio.trim() || undefined,
         pontoReferencia: form.pontoReferencia.trim() || undefined,
-        distritoId: form.distritoId.trim() || undefined,
         descobrimento: form.descobrimento || undefined,
         programaSocial: form.programaSocial || "nenhum",
         nis: form.nis.trim() || undefined,
         planoSaude: form.planoSaude || undefined,
         manterAcompanhamentoUbs: form.manterAcompanhamentoUbs || undefined,
-        ubsId: form.ubsId.trim(),
+        ubsId: undefined,
         dum: form.dum.trim() || undefined,
         gestacoesPrevias: form.gestacoesPrevias.trim() || undefined,
         partosNormal: form.partosNormal.trim() || undefined,
@@ -422,5 +442,6 @@ export function useCadastroGestante() {
     confirmacaoData,
     confirmacaoCarregando,
     fecharConfirmacao,
+    pacienteLocalizado,
   };
 }

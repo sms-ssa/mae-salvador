@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
   const nis = String(body.nis ?? "").trim() || null;
   const planoSaude = (String(body.planoSaude ?? "").trim() || null) as "sim" | "nao" | null;
   const manterAcompanhamentoUbs = (String(body.manterAcompanhamentoUbs ?? "").trim() || null) as "sim" | "nao" | null;
-  const ubsId = String(body.ubsId ?? "").trim();
+  const ubsId = String(body.ubsId ?? "").trim() || null;
   const dum = toDate(String(body.dum ?? ""));
   const gestacoesPrevias = toSmallInt(String(body.gestacoesPrevias ?? ""));
   const partosNormal = toSmallInt(String(body.partosNormal ?? ""));
@@ -180,13 +180,6 @@ export async function POST(request: NextRequest) {
       );
     }
   }
-  if (!ubsId) {
-    return NextResponse.json(
-      { ok: false, erro: "UBS de vinculação é obrigatória." },
-      { status: 400 }
-    );
-  }
-
   const senhaHash = senha ? hashSenha(senha) : null;
   const racaCorDb = racaCor && ["BRANCA", "PARDA", "PRETA", "AMARELA", "INDIGENA"].includes(racaCor) ? racaCor : null;
   const sexoDb = sexo && ["FEMININO", "MASCULINO", "INDETERMINADO"].includes(sexo) ? sexo : null;
@@ -242,7 +235,7 @@ export async function POST(request: NextRequest) {
     });
     if (id === null) {
       return NextResponse.json(
-        { ok: false, erro: "UBS de vinculação não encontrada. Selecione uma UBS válida." },
+        { ok: false, erro: ubsId ? "UBS de vinculação não encontrada. Selecione uma UBS válida." : "Erro ao salvar cadastro." },
         { status: 400 }
       );
     }

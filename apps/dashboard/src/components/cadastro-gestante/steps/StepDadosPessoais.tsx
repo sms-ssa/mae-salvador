@@ -13,6 +13,19 @@ import {
 import type { FormCadastroGestante } from "../validators/validacoesCadastroGestante";
 import { formatCpf, caracteresNomeValidos } from "../validators/validacoesCadastroGestante";
 
+/** Lista de municípios (BA) para Município de Nascimento - lista suspensa conforme doc. */
+const MUNICIPIOS_NASCIMENTO = [
+  "Salvador", "Feira de Santana", "Vitória da Conquista", "Camaçari", "Lauro de Freitas",
+  "Ilhéus", "Itabuna", "Juazeiro", "Alagoinhas", "Teixeira de Freitas", "Paulo Afonso",
+  "Eunápolis", "Simões Filho", "Barreiras", "Luís Eduardo Magalhães", "Porto Seguro",
+  "Dias d'Ávila", "Candeias", "Jacobina", "Senhor do Bonfim", "Valença", "Guanambi",
+  "Serrinha", "Irecê", "Brumado", "Conde", "Santo Antônio de Jesus", "Campo Formoso",
+  "Bom Jesus da Lapa", "Jequié", "Euclides da Cunha", "Ribeira do Pombal", "Casa Nova",
+  "Santo Amaro", "Cruz das Almas", "Macaúbas", "Esplanada", "Amargosa", "Ipiaú",
+  "Mata de São João", "Santa Maria da Vitória", "Xique-Xique", "Remanso", "Poções",
+  "Santana", "Livramento de Nossa Senhora", "Seabra", "Tucano", "Camamu", "Outro",
+];
+
 const DEFICIENCIA_OPCOES = [
   { value: "Física", id: "def-fisica" },
   { value: "Auditiva", id: "def-auditiva" },
@@ -26,9 +39,10 @@ interface StepDadosPessoaisProps {
   form: FormCadastroGestante;
   updateField: <K extends keyof FormCadastroGestante>(key: K, value: FormCadastroGestante[K]) => void;
   erros: { cpf?: string; cns?: string; nomeCompleto?: string; dataNascimento?: string };
+  pacienteLocalizado?: boolean;
 }
 
-export function StepDadosPessoais({ form, updateField, erros }: StepDadosPessoaisProps) {
+export function StepDadosPessoais({ form, updateField, erros, pacienteLocalizado }: StepDadosPessoaisProps) {
   const cpfDigits = form.cpf.replace(/\D/g, "").slice(0, 11);
   const cnsDigits = form.cns.replace(/\D/g, "").slice(0, 15);
   const dataNascValida = (() => {
@@ -55,6 +69,7 @@ export function StepDadosPessoais({ form, updateField, erros }: StepDadosPessoai
               onChange={(e) => updateField("cpf", formatCpf(e.target.value))}
               maxLength={14}
               className={cpfDigits.length === 11 && erros.cpf ? "border-destructive" : ""}
+              disabled={pacienteLocalizado}
             />
             {erros.cpf && <p className="text-sm text-destructive">{erros.cpf}</p>}
           </div>
@@ -69,6 +84,7 @@ export function StepDadosPessoais({ form, updateField, erros }: StepDadosPessoai
               onChange={(e) => updateField("cns", e.target.value.replace(/\D/g, "").slice(0, 15))}
               maxLength={15}
               className={cnsDigits.length === 15 && erros.cns ? "border-destructive" : ""}
+              disabled={pacienteLocalizado}
             />
             {erros.cns && <p className="text-sm text-destructive">{erros.cns}</p>}
           </div>
@@ -286,13 +302,16 @@ export function StepDadosPessoais({ form, updateField, erros }: StepDadosPessoai
           </div>
           <div className="space-y-2">
             <Label htmlFor="municipio-nascimento">Município de nascimento</Label>
-            <Input
-              id="municipio-nascimento"
-              placeholder="Ex.: Salvador, Feira de Santana"
-              value={form.municipioNascimento}
-              onChange={(e) => updateField("municipioNascimento", e.target.value.slice(0, 100))}
-              maxLength={100}
-            />
+            <Select value={form.municipioNascimento || ""} onValueChange={(v) => updateField("municipioNascimento", v)}>
+              <SelectTrigger id="municipio-nascimento">
+                <SelectValue placeholder="Selecione o município" />
+              </SelectTrigger>
+              <SelectContent>
+                {MUNICIPIOS_NASCIMENTO.map((nome) => (
+                  <SelectItem key={nome} value={nome}>{nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <p className="text-[10px] text-muted-foreground">Usado na recuperação de senha (pergunta de segurança)</p>
           </div>
         </div>

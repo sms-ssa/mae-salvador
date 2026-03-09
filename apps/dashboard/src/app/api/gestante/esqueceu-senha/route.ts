@@ -50,6 +50,31 @@ function gerarOpcoes(correta: string, tipo: string): { id: string; texto: string
   return todas.map((texto) => ({ id: randomBytes(8).toString("hex"), texto }));
 }
 
+type Pool = Awaited<ReturnType<typeof getAppPool>>;
+async function obterNovaPergunta(pool: Pool, cpfCns: string): Promise<{ pergunta: string; opcoes: { id: string; texto: string }[]; correctId: string; perguntaId: string } | null> {
+  const res = await pool.query<{ nome_completo: string; nome_mae: string | null; data_nascimento: Date | null; municipio_nascimento: string | null }>(
+    `SELECT nome_completo, nome_mae, data_nascimento, municipio_nascimento FROM gestante_cadastro
+     WHERE (LENGTH($1) = 11 AND REPLACE(REPLACE(REPLACE(COALESCE(cpf, '')::text, '.'::text, ''::text), '-'::text, ''::text), ' '::text, ''::text) = $1)
+        OR (LENGTH($1) = 15 AND cns IS NOT NULL AND REPLACE(REPLACE(REPLACE(COALESCE(cns, '')::text, '.'::text, ''::text), '-'::text, ''::text), ' '::text, ''::text) = $1)
+     LIMIT 1`,
+    [cpfCns]
+  );
+  const row = res.rows[0];
+  if (!row) return null;
+  const municipioNasc = (row.municipio_nascimento ?? "").trim();
+  const tipos = [
+    { id: "nome", pergunta: "Qual o nome completo cadastrado?", valor: row.nome_completo ?? "" },
+    { id: "nomeMae", pergunta: "Qual o nome da mãe?", valor: (row.nome_mae ?? "").trim() },
+    { id: "data", pergunta: "Qual a data de nascimento?", valor: row.data_nascimento ? row.data_nascimento.toISOString().slice(0, 10) : "" },
+    { id: "municipioNascimento", pergunta: "Qual o município de nascimento?", valor: municipioNasc },
+  ].filter((t) => t.valor && t.valor !== "IGNORADA" && t.valor !== "IGNORADO");
+  if (tipos.length === 0) return null;
+  const escolhido = tipos[Math.floor(Math.random() * tipos.length)];
+  const opcoes = gerarOpcoes(escolhido.valor, escolhido.id);
+  const correctId = opcoes.find((o) => o.texto === escolhido.valor)!.id;
+  return { pergunta: escolhido.pergunta, opcoes: opcoes.map((o) => ({ id: o.id, texto: o.texto })), correctId, perguntaId: escolhido.id };
+}
+
 /**
  * GET /api/gestante/esqueceu-senha?cpfCns=...
  * Retorna pergunta e 3 opções (uma correta). Armazena qual opção é a correta para verificação.
@@ -72,44 +97,17 @@ export async function GET(request: NextRequest) {
     );
   }
   const pool = getAppPool();
-  const res = await pool.query<{ nome_completo: string; nome_mae: string | null; data_nascimento: Date | null; municipio_nascimento: string | null }>(
-    `SELECT nome_completo, nome_mae, data_nascimento, municipio_nascimento FROM gestante_cadastro
-     WHERE (LENGTH($1) = 11 AND REPLACE(REPLACE(REPLACE(COALESCE(cpf, '')::text, '.'::text, ''::text), '-'::text, ''::text), ' '::text, ''::text) = $1)
-        OR (LENGTH($1) = 15 AND cns IS NOT NULL AND REPLACE(REPLACE(REPLACE(COALESCE(cns, '')::text, '.'::text, ''::text), '-'::text, ''::text), ' '::text, ''::text) = $1)
-     LIMIT 1`,
-    [cpfCns]
-  );
-  const row = res.rows[0];
-  if (!row) {
+  const nova = await obterNovaPergunta(pool, cpfCns);
+  if (!nova) {
     return NextResponse.json(
       { erro: "Nenhum usuário localizado com o CPF ou CNS informado." },
       { status: 404 }
     );
   }
-  const municipioNasc = (row.municipio_nascimento ?? "").trim();
-  const tipos = [
-    { id: "nome", pergunta: "Qual o nome completo cadastrado?", valor: row.nome_completo ?? "" },
-    { id: "nomeMae", pergunta: "Qual o nome da mãe?", valor: (row.nome_mae ?? "").trim() },
-    {
-      id: "data",
-      pergunta: "Qual a data de nascimento?",
-      valor: row.data_nascimento ? row.data_nascimento.toISOString().slice(0, 10) : "",
-    },
-    { id: "municipioNascimento", pergunta: "Qual o município de nascimento?", valor: municipioNasc },
-  ].filter((t) => t.valor && t.valor !== "IGNORADA" && t.valor !== "IGNORADO");
-  if (tipos.length === 0) {
-    return NextResponse.json(
-      { erro: "Não foi possível gerar pergunta de segurança. Procure a unidade de saúde." },
-      { status: 400 }
-    );
-  }
-  const escolhido = tipos[Math.floor(Math.random() * tipos.length)];
-  const opcoes = gerarOpcoes(escolhido.valor, escolhido.id);
-  const correctId = opcoes.find((o) => o.texto === escolhido.valor)!.id;
-  challenges.set(cpfCns, { correctId, perguntaId: escolhido.id });
+  challenges.set(cpfCns, { correctId: nova.correctId, perguntaId: nova.perguntaId });
   return NextResponse.json({
-    pergunta: escolhido.pergunta,
-    opcoes: opcoes.map((o) => ({ id: o.id, texto: o.texto })),
+    pergunta: nova.pergunta,
+    opcoes: nova.opcoes,
   });
 }
 
@@ -151,8 +149,26 @@ export async function POST(request: NextRequest) {
       const blockedUntil = count >= TENTATIVAS_MAX ? getProximoDiaUTC() : 0;
       tentativasErradas.set(cpfCns, { count, blockedUntil });
       challenges.delete(cpfCns);
+      if (count >= TENTATIVAS_MAX) {
+        return NextResponse.json(
+          { ok: false, erro: "Limite de tentativas alcançado. Tente novamente amanhã!" },
+          { status: 400 }
+        );
+      }
+      const pool = getAppPool();
+      const proxima = await obterNovaPergunta(pool, cpfCns);
+      if (proxima) {
+        challenges.set(cpfCns, { correctId: proxima.correctId, perguntaId: proxima.perguntaId });
+        return NextResponse.json({
+          ok: false,
+          erro: "Resposta incorreta. Tente a próxima pergunta.",
+          proximaPergunta: true,
+          pergunta: proxima.pergunta,
+          opcoes: proxima.opcoes,
+        }, { status: 400 });
+      }
       return NextResponse.json(
-        { ok: false, erro: count >= TENTATIVAS_MAX ? "Limite de tentativas alcançado. Tente novamente amanhã!" : "Resposta incorreta. Tente novamente." },
+        { ok: false, erro: "Resposta incorreta. Tente novamente." },
         { status: 400 }
       );
     }

@@ -41,7 +41,7 @@ export interface GestanteCadastroInsertParams {
   nis: string | null;
   planoSaude: string | null;
   manterAcompanhamentoUbs: string | null;
-  ubsId: string;
+  ubsId: string | null;
   gestacoesPrevias: number | null;
   partosNormal: number | null;
   partosCesareo: number | null;
@@ -68,16 +68,16 @@ export async function insertGestanteCadastro(
         [params.distritoSanitarioId]
       )
     : { rows: [] };
-  const ubsRow = await pool.query<{ id: string }>(
-    "SELECT id FROM ubs WHERE codigo = $1",
-    [params.ubsId]
-  );
-  const distritoUuid = distritoRow.rows[0]?.id ?? null;
-  const ubsUuid = ubsRow.rows[0]?.id ?? null;
-
-  if (!ubsUuid) {
-    return null;
+  let ubsUuid: string | null = null;
+  if (params.ubsId) {
+    const ubsRow = await pool.query<{ id: string }>(
+      "SELECT id FROM ubs WHERE codigo = $1",
+      [params.ubsId]
+    );
+    ubsUuid = ubsRow.rows[0]?.id ?? null;
+    if (!ubsUuid) return null;
   }
+  const distritoUuid = distritoRow.rows[0]?.id ?? null;
 
   const res = await pool.query<{ id: string }>(
     `INSERT INTO gestante_cadastro (

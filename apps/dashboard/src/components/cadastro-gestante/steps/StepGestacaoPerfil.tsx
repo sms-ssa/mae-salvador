@@ -56,7 +56,6 @@ export function StepGestacaoPerfil({ form, updateField, erroDum }: StepGestacaoP
                 aria-invalid={!!erroDum}
               />
               {erroDum && <p className="text-sm text-destructive">{erroDum}</p>}
-              <p className="text-[10px] text-muted-foreground">Facultativo. Se informada: entre 7 e 294 dias atrás.</p>
             </div>
           </div>
 
@@ -151,10 +150,12 @@ export function StepGestacaoPerfil({ form, updateField, erroDum }: StepGestacaoP
                 id="gestacoes"
                 type="number"
                 min={0}
+                max={99}
                 placeholder="0"
                 value={form.gestacoesPrevias}
-                onChange={(e) => updateField("gestacoesPrevias", e.target.value)}
+                onChange={(e) => updateField("gestacoesPrevias", e.target.value.replace(/\D/g, "").slice(0, 2))}
               />
+              <p className="text-[10px] text-muted-foreground">Até 2 dígitos</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="partos-cesareo">Partos cesáreos</Label>
@@ -162,10 +163,12 @@ export function StepGestacaoPerfil({ form, updateField, erroDum }: StepGestacaoP
                 id="partos-cesareo"
                 type="number"
                 min={0}
+                max={99}
                 placeholder="0"
                 value={form.partosCesareo}
-                onChange={(e) => updateField("partosCesareo", e.target.value)}
+                onChange={(e) => updateField("partosCesareo", e.target.value.replace(/\D/g, "").slice(0, 2))}
               />
+              <p className="text-[10px] text-muted-foreground">Até 2 dígitos</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="partos-normal">Partos normais</Label>
@@ -173,10 +176,12 @@ export function StepGestacaoPerfil({ form, updateField, erroDum }: StepGestacaoP
                 id="partos-normal"
                 type="number"
                 min={0}
+                max={99}
                 placeholder="0"
                 value={form.partosNormal}
-                onChange={(e) => updateField("partosNormal", e.target.value)}
+                onChange={(e) => updateField("partosNormal", e.target.value.replace(/\D/g, "").slice(0, 2))}
               />
+              <p className="text-[10px] text-muted-foreground">Até 2 dígitos</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="abortos">Abortos</Label>
@@ -184,10 +189,12 @@ export function StepGestacaoPerfil({ form, updateField, erroDum }: StepGestacaoP
                 id="abortos"
                 type="number"
                 min={0}
+                max={99}
                 placeholder="0"
                 value={form.abortos}
-                onChange={(e) => updateField("abortos", e.target.value)}
+                onChange={(e) => updateField("abortos", e.target.value.replace(/\D/g, "").slice(0, 2))}
               />
+              <p className="text-[10px] text-muted-foreground">Até 2 dígitos</p>
             </div>
           </div>
         </CardContent>
@@ -202,31 +209,79 @@ export function StepGestacaoPerfil({ form, updateField, erroDum }: StepGestacaoP
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="alergias">Alergias</Label>
-            <Input
-              id="alergias"
-              placeholder="Descreva alergias conhecidas"
-              value={form.alergias}
-              onChange={(e) => updateField("alergias", e.target.value)}
-            />
+            <Label>Alergias conhecidas?</Label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="alergias"
+                  checked={form.alergias === "sim"}
+                  onChange={() => updateField("alergias", "sim")}
+                  className="rounded-full"
+                />
+                <span className="text-sm">Sim</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="alergias"
+                  checked={form.alergias !== "sim" && (form.alergias === "nao" || !form.alergias)}
+                  onChange={() => updateField("alergias", "nao")}
+                  className="rounded-full"
+                />
+                <span className="text-sm">Não</span>
+              </label>
+            </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="doencas">Doenças conhecidas (antecedentes)</Label>
-            <Input
-              id="doencas"
-              placeholder="Diabetes, hipertensão, cardiopatia..."
-              value={form.doencasConhecidas}
-              onChange={(e) => updateField("doencasConhecidas", e.target.value)}
-            />
+            <Label>Doenças conhecidas (antecedentes)?</Label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="doencas"
+                  checked={form.doencasConhecidas === "sim"}
+                  onChange={() => updateField("doencasConhecidas", "sim")}
+                  className="rounded-full"
+                />
+                <span className="text-sm">Sim</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="doencas"
+                  checked={form.doencasConhecidas !== "sim" && (form.doencasConhecidas === "nao" || !form.doencasConhecidas)}
+                  onChange={() => updateField("doencasConhecidas", "nao")}
+                  className="rounded-full"
+                />
+                <span className="text-sm">Não</span>
+              </label>
+            </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="medicacoes">Medicações em uso</Label>
-            <Input
-              id="medicacoes"
-              placeholder="Medicamentos que faz uso atualmente"
-              value={form.medicacoesEmUso}
-              onChange={(e) => updateField("medicacoesEmUso", e.target.value)}
-            />
+            <Label>Medicações em uso?</Label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="medicacoes"
+                  checked={form.medicacoesEmUso === "sim"}
+                  onChange={() => updateField("medicacoesEmUso", "sim")}
+                  className="rounded-full"
+                />
+                <span className="text-sm">Sim</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="medicacoes"
+                  checked={form.medicacoesEmUso !== "sim" && (form.medicacoesEmUso === "nao" || !form.medicacoesEmUso)}
+                  onChange={() => updateField("medicacoesEmUso", "nao")}
+                  className="rounded-full"
+                />
+                <span className="text-sm">Não</span>
+              </label>
+            </div>
           </div>
         </CardContent>
       </Card>

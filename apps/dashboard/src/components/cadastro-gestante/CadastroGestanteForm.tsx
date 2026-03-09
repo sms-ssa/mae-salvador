@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { UBS_LIST, DISTRITOS_SANITARIOS } from "@mae-salvador/shared";
 import { useCadastroGestante } from "./hooks/useCadastroGestante";
 import { StepHeader } from "./components/StepHeader";
 import { StepNavigation } from "./components/StepNavigation";
@@ -39,6 +38,7 @@ export function CadastroGestanteForm() {
     confirmacaoData,
     confirmacaoCarregando,
     fecharConfirmacao,
+    pacienteLocalizado,
   } = useCadastroGestante();
 
   const canSubmit =
@@ -46,10 +46,6 @@ export function CadastroGestanteForm() {
     (etapa === 2 && canSubmitStep2) ||
     (etapa === 3 && canSubmitStep3) ||
     (etapa === 4 && canSubmitStep4);
-
-  const ubsOptions = form.distritoId
-    ? UBS_LIST.filter((u) => u.distritoSanitarioId === form.distritoId)
-    : UBS_LIST;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[oklch(0.22_0.06_255)] via-[oklch(0.30_0.10_255)] to-[oklch(0.18_0.05_260)] px-4 py-8">
@@ -78,14 +74,13 @@ export function CadastroGestanteForm() {
                   form={form}
                   updateField={updateField}
                   erros={errosStep1}
+                  pacienteLocalizado={pacienteLocalizado}
                 />
               )}
               {etapa === 2 && (
                 <StepContatoEndereco
                   form={form}
                   updateField={updateField}
-                  distritos={DISTRITOS_SANITARIOS}
-                  ubsOptions={ubsOptions}
                   erroCep={erros.cep}
                   cepBuscando={loading.cepBuscando}
                   onPesquisarCep={pesquisarCep}

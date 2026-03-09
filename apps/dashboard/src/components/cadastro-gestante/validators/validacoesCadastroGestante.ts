@@ -69,6 +69,8 @@ export interface FormCadastroGestante {
   ddd: string;
   celularPrincipal: string;
   telefoneAlternativo: string;
+  temWhatsappAlternativo: boolean;
+  dddResidencial: string;
   telefoneResidencial: string;
   email: string;
   temWhatsapp: boolean;
@@ -127,15 +129,15 @@ export function validarStep1(form: FormCadastroGestante): boolean {
 export function validarStep2(form: FormCadastroGestante): boolean {
   const dddDig = onlyDigits(form.ddd, 2);
   const celDig = onlyDigits(form.celularPrincipal, 9);
+  const dddResDig = onlyDigits(form.dddResidencial, 2);
   const residencialDig = onlyDigits(form.telefoneResidencial, 8);
   const telefonePrincipalOk = dddDig.length === 2 && celDig.length === 9 && celDig[0] === "9";
-  const telefoneResidencialOk = dddDig.length === 2 && residencialDig.length === 8 && /^[2-5]/.test(residencialDig);
+  const telefoneResidencialOk = dddResDig.length === 2 && residencialDig.length === 8 && /^[2-5]/.test(residencialDig);
   if (!telefonePrincipalOk && !telefoneResidencialOk) return false;
   if (form.email.trim() && (!form.email.includes("@") || !form.email.includes("."))) return false;
   if (onlyDigits(form.cep, 8).length !== 8) return false;
   if (!form.logradouro.trim() || !form.bairro.trim() || !form.municipio.trim() || !form.tipoLogradouro.trim()) return false;
   if (!form.numeroSemNumero && !form.numero.trim()) return false;
-  if (!form.distritoId || !form.ubsId) return false;
   return true;
 }
 
@@ -189,9 +191,10 @@ export function getFaltando(etapa: 1 | 2 | 3 | 4, form: FormCadastroGestante): s
   })();
   const dddDig = onlyDigits(form.ddd, 2);
   const celDig = onlyDigits(form.celularPrincipal, 9);
+  const dddResDig = onlyDigits(form.dddResidencial, 2);
   const residencialDig = onlyDigits(form.telefoneResidencial, 8);
   const telefonePrincipalOk = dddDig.length === 2 && celDig.length === 9 && celDig[0] === "9";
-  const telefoneResidencialOk = dddDig.length === 2 && residencialDig.length === 8 && /^[2-5]/.test(residencialDig);
+  const telefoneResidencialOk = dddResDig.length === 2 && residencialDig.length === 8 && /^[2-5]/.test(residencialDig);
   const temCelularOuResidencial = telefonePrincipalOk || telefoneResidencialOk;
   const emailOk = !form.email.trim() || (form.email.includes("@") && form.email.includes("."));
   const dumOk = !form.dum.trim() || validarDum(form.dum) === null;
@@ -223,8 +226,6 @@ export function getFaltando(etapa: 1 | 2 | 3 | 4, form: FormCadastroGestante): s
     if (!form.bairro.trim()) faltando.push("Bairro");
     if (!form.municipio.trim()) faltando.push("Município de Residência");
     if (!form.tipoLogradouro.trim()) faltando.push("Tipo de Logradouro");
-    if (!form.distritoId) faltando.push("Distrito Sanitário");
-    if (!form.ubsId) faltando.push("UBS de Vinculação");
   }
   if (etapa === 3) {
     if (!form.descobrimento) faltando.push("Como descobriu a gestação");

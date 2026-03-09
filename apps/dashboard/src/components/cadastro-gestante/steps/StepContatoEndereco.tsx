@@ -14,13 +14,10 @@ import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 import type { FormCadastroGestante } from "../validators/validacoesCadastroGestante";
 import { formatCep, formatPhone } from "../validators/validacoesCadastroGestante";
-import type { UBS, DistritoSanitario } from "@mae-salvador/shared";
 
 interface StepContatoEnderecoProps {
   form: FormCadastroGestante;
   updateField: <K extends keyof FormCadastroGestante>(key: K, value: FormCadastroGestante[K]) => void;
-  distritos: DistritoSanitario[];
-  ubsOptions: UBS[];
   erroCep: string;
   cepBuscando: boolean;
   onPesquisarCep: () => void;
@@ -29,8 +26,6 @@ interface StepContatoEnderecoProps {
 export function StepContatoEndereco({
   form,
   updateField,
-  distritos,
-  ubsOptions,
   erroCep,
   cepBuscando,
   onPesquisarCep,
@@ -79,7 +74,7 @@ export function StepContatoEndereco({
               </label>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="tel-alt">Telefone celular alternativo</Label>
               <Input
@@ -88,6 +83,30 @@ export function StepContatoEndereco({
                 value={form.telefoneAlternativo}
                 onChange={(e) => updateField("telefoneAlternativo", formatPhone(e.target.value))}
                 maxLength={15}
+                inputMode="numeric"
+              />
+            </div>
+            <div className="space-y-2 flex flex-col justify-end">
+              <label className="flex items-center gap-2 cursor-pointer h-9">
+                <input
+                  type="checkbox"
+                  checked={form.temWhatsappAlternativo}
+                  onChange={(e) => updateField("temWhatsappAlternativo", e.target.checked)}
+                  className="rounded border-input"
+                />
+                <span className="text-sm">Também é WhatsApp</span>
+              </label>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="ddd-res">DDD (residencial)</Label>
+              <Input
+                id="ddd-res"
+                placeholder="71"
+                value={form.dddResidencial}
+                onChange={(e) => updateField("dddResidencial", e.target.value.replace(/\D/g, "").slice(0, 2))}
+                maxLength={2}
                 inputMode="numeric"
               />
             </div>
@@ -243,39 +262,6 @@ export function StepContatoEndereco({
               value={form.pontoReferencia}
               onChange={(e) => updateField("pontoReferencia", e.target.value)}
             />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Distrito Sanitário</Label>
-              <Select value={form.distritoId} onValueChange={(v) => updateField("distritoId", v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o distrito" />
-                </SelectTrigger>
-                <SelectContent>
-                  {distritos.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
-                      {d.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>UBS de Vinculação <span className="text-red-500">*</span></Label>
-              <Select value={form.ubsId} onValueChange={(v) => updateField("ubsId", v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a UBS" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ubsOptions.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
         </CardContent>
       </Card>

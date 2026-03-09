@@ -161,11 +161,6 @@ export default function GestanteHomePage() {
           <LogOut className="w-4 h-4 mr-2" />
           Sair
         </Button>
-        <p className="mt-2 text-center">
-          <Link href="/login" className="text-xs text-muted-foreground hover:underline">
-            Voltar ao perfil de acesso
-          </Link>
-        </p>
       </div>
     </aside>
   );

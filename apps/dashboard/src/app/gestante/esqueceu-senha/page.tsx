@@ -68,6 +68,9 @@ export default function GestanteEsqueceuSenhaPage() {
         setNotificacao(data.erro ?? "Resposta incorreta. Tente novamente.");
         if (data.erro?.includes("Limite")) {
           setEtapa("cpf");
+        } else if (data.proximaPergunta && data.pergunta && data.opcoes) {
+          setPergunta(data.pergunta);
+          setOpcoes(data.opcoes);
         }
       }
     } catch (_) {

@@ -34,6 +34,9 @@ export default function PesquisaCidadaoPage() {
   const [nomeMaeAlt, setNomeMaeAlt] = useState("");
   const [dataNascAlt, setDataNascAlt] = useState("");
   const [erroDados, setErroDados] = useState("");
+  const [erroNomeCompleto, setErroNomeCompleto] = useState("");
+  const [erroNomeMae, setErroNomeMae] = useState("");
+  const [erroDataNasc, setErroDataNasc] = useState("");
   const [notificacao, setNotificacao] = useState("");
   const [cadastroJaExiste, setCadastroJaExiste] = useState(false);
   const [carregando, setCarregando] = useState(false);
@@ -80,7 +83,7 @@ export default function PesquisaCidadaoPage() {
         return;
       }
       setNotificacao("Cidadão(ã) não localizado(a) na base federal. Use a busca alternativa abaixo.");
-      setBuscaAlternativa("dados");
+      setBuscaAlternativa("cns");
     } catch (_) {
       router.push("/gestante/cadastrar");
     }
@@ -135,29 +138,33 @@ export default function PesquisaCidadaoPage() {
 
   async function pesquisarAlternativaDados() {
     setErroDados("");
+    setErroNomeCompleto("");
+    setErroNomeMae("");
+    setErroDataNasc("");
     setNotificacao("");
     setCadastroJaExiste(false);
+    let hasError = false;
     if (!nomeCompletoAlt.trim()) {
-      setErroDados("É necessário preencher o Nome Completo");
-      return;
-    }
-    if (!validarNome(nomeCompletoAlt)) {
-      setErroDados("Existem caracteres inválidos");
-      return;
-    }
-    if (!nomeMaeAlt.trim() && !dataNascAlt.trim()) {
-      setErroDados("É necessário preencher Nome da Mãe e/ou Data de Nascimento");
-      return;
+      setErroNomeCompleto("É necessário preencher o Nome Completo");
+      hasError = true;
+    } else if (!validarNome(nomeCompletoAlt)) {
+      setErroNomeCompleto("Existem caracteres inválidos");
+      hasError = true;
     }
     if (nomeMaeAlt.trim() && !validarNome(nomeMaeAlt)) {
-      setErroDados("Existem caracteres inválidos");
-      return;
+      setErroNomeMae("Existem caracteres inválidos");
+      hasError = true;
+    }
+    if (!nomeMaeAlt.trim() && !dataNascAlt.trim()) {
+      setErroNomeMae("É necessário preencher Nome da Mãe e/ou Data de Nascimento");
+      hasError = true;
     }
     const hoje = new Date().toISOString().slice(0, 10);
     if (dataNascAlt && dataNascAlt >= hoje) {
-      setErroDados("Data inválida");
-      return;
+      setErroDataNasc("Data inválida");
+      hasError = true;
     }
+    if (hasError) return;
     setCarregando(true);
     try {
       const verificarRes = await fetch("/api/gestante/verificar", {
@@ -194,10 +201,6 @@ export default function PesquisaCidadaoPage() {
     setCarregando(false);
   }
 
-  function irParaCadastroManual() {
-    router.push("/gestante/cadastrar");
-  }
-
   const mostrarBuscaAlternativa = naoPossui || notificacao;
 
   return (
@@ -207,7 +210,7 @@ export default function PesquisaCidadaoPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">Pesquisa do(a) Cidadão(ã)</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Informe o CPF para localizar ou use a opção abaixo para cadastro manual.
+              Informe o CPF para localizar o(a) cidadão(ã).
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -285,7 +288,7 @@ export default function PesquisaCidadaoPage() {
                 onChange={(e) => {
                   setNaoPossui(e.target.checked);
                   if (e.target.checked) {
-                    setBuscaAlternativa("dados");
+                    setBuscaAlternativa("cns");
                     setNotificacao("");
                   } else {
                     setBuscaAlternativa("");
@@ -360,10 +363,11 @@ export default function PesquisaCidadaoPage() {
                         value={nomeCompletoAlt}
                         onChange={(e) => {
                           setNomeCompletoAlt(e.target.value.slice(0, 70));
-                          setErroDados("");
+                          setErroNomeCompleto("");
                         }}
-                        className={erroDados ? "border-destructive" : ""}
+                        className={erroNomeCompleto ? "border-destructive" : ""}
                       />
+                      {erroNomeCompleto && <p className="text-sm text-destructive">{erroNomeCompleto}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="mae-alt">Nome da Mãe</Label>
@@ -374,9 +378,11 @@ export default function PesquisaCidadaoPage() {
                         value={nomeMaeAlt}
                         onChange={(e) => {
                           setNomeMaeAlt(e.target.value.slice(0, 70));
-                          setErroDados("");
+                          setErroNomeMae("");
                         }}
+                        className={erroNomeMae ? "border-destructive" : ""}
                       />
+                      {erroNomeMae && <p className="text-sm text-destructive">{erroNomeMae}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="nasc-alt">Data de Nascimento</Label>
@@ -386,20 +392,17 @@ export default function PesquisaCidadaoPage() {
                         value={dataNascAlt}
                         onChange={(e) => {
                           setDataNascAlt(e.target.value);
-                          setErroDados("");
+                          setErroDataNasc("");
                         }}
+                        className={erroDataNasc ? "border-destructive" : ""}
                       />
+                      {erroDataNasc && <p className="text-sm text-destructive">{erroDataNasc}</p>}
                     </div>
-                    {erroDados && <p className="text-sm text-destructive">{erroDados}</p>}
                     <Button type="button" onClick={pesquisarAlternativaDados} className="w-full" disabled={carregando}>
                       {carregando ? "Pesquisando…" : "Pesquisar"}
                     </Button>
                   </div>
                 )}
-
-                <Button type="button" variant="outline" className="w-full" onClick={irParaCadastroManual}>
-                  Seguir para cadastro manual
-                </Button>
               </div>
             )}
 
