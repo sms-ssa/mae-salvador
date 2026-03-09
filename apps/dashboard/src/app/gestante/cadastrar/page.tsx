@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Check, Phone, Search } from "lucide-react";
+import { Check, Phone, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { UBS_LIST, DISTRITOS_SANITARIOS, mapPacienteBaseFederalToDadosCadastro } from "@mae-salvador/shared";
 import type { DescobrimentoGestacao, ProgramaSocial } from "@mae-salvador/shared";
+import { validarCPF, validarCNS } from "@/lib/validacoes-login";
 
 const CNS_PACIENTE_KEY = "cnsPaciente";
 const DADOS_PACIENTE_BUSCA_ALT_KEY = "dadosPacienteBuscaAlt";
@@ -36,7 +37,7 @@ const DEFICIENCIA_OPCOES = [
   { value: "Auditiva", id: "def-auditiva" },
   { value: "Visual", id: "def-visual" },
   { value: "Intelectual", id: "def-intelectual" },
-  { value: "TEA", id: "def-tea" },
+  { value: "Transtorno do Espectro Autista", id: "def-tea" },
   { value: "Fibromialgia", id: "def-fibromialgia" },
 ] as const;
 
@@ -59,11 +60,28 @@ function formatCepValue(value: string): string {
  * Acessível após pesquisa-cidadao; não usa o layout (dashboard) que exige usuário logado.
  * Se veio com ?fromCns=1 e há dados em sessionStorage (cnsPaciente), pré-preenche o formulário.
  */
+/** Caracteres permitidos em nome (doc: letras romano, acentos, apóstrofo, espaço; vedado espaço duplo). */
+function caracteresNomeValidos(s: string): boolean {
+  if (!s.trim()) return true;
+  if (/\s\s/.test(s)) return false;
+  return /^[\p{L}\s']+$/u.test(s);
+}
+
+const ETAPAS = [
+  { num: 1, titulo: "Dados Pessoais" },
+  { num: 2, titulo: "Contatos e Endereço" },
+  { num: 3, titulo: "Gestação e Perfil Social" },
+  { num: 4, titulo: "Senha de Acesso" },
+] as const;
+
 function CadastrarGestanteContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const [etapa, setEtapa] = useState<1 | 2 | 3 | 4>(1);
   const [submitted, setSubmitted] = useState(false);
   const [erroEnvio, setErroEnvio] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const [erroNotificacao, setErroNotificacao] = useState("");
 
   // Required fields
   const [cpf, setCpf] = useState("");
@@ -217,47 +235,135 @@ function CadastrarGestanteContent() {
   const nisDig = nis.replace(/\D/g, "").slice(0, 11);
   const nisOk = programaSocial !== "bolsa-familia" || nisDig.length === 11;
 
-  /** Lista o que falta para habilitar o botão Continuar (ajuda quando o usuário acha que preencheu tudo). */
-  const faltando: string[] = [];
-  if (!temCpfOuCns) faltando.push("CPF (11 dígitos) ou CNS (15 dígitos)");
-  if (!nomeCompleto.trim()) faltando.push("Nome completo");
-  if (!nomeMaeIgnorada && nomeMae.trim() === "") faltando.push("Nome da Mãe (ou marque Ignorada)");
-  if (!nomePaiIgnorado && nomePai.trim() === "") faltando.push("Nome do Pai (ou marque Ignorado)");
-  if (!dataNascimento.trim()) faltando.push("Data de nascimento");
-  if (!telefonePrincipalOk) faltando.push("DDD (2 dígitos) e Celular principal (9 dígitos, começando com 9)");
-  if (!emailOk) faltando.push("E-mail válido (com @ e ponto) ou deixe em branco");
-  if (!logradouro.trim()) faltando.push("Logradouro");
-  if (!numeroSemNumero && !numero.trim()) faltando.push("Número (ou marque S/N)");
-  if (!bairro.trim()) faltando.push("Bairro");
-  if (cep.replace(/\D/g, "").length !== 8) faltando.push("CEP (8 dígitos)");
-  if (!descobrimento) faltando.push("Como descobriu a gestação");
-  if (!programaSocial) faltando.push("Programa social");
-  if (!nisOk) faltando.push("NIS (11 dígitos, obrigatório para Bolsa Família)");
-  if (!dumOk) faltando.push("DUM: se informada, deve estar entre 7 e 294 dias atrás");
-  if (!ubsId) faltando.push("UBS de Vinculação");
+  const residencialDig = telefoneResidencial.replace(/\D/g, "").slice(0, 8);
+  const telefoneResidencialOk = dddDig.length === 2 && residencialDig.length === 8 && /^[2-5]/.test(residencialDig);
+  const temCelularOuResidencial = telefonePrincipalOk || telefoneResidencialOk;
 
-  const canSubmit =
+  const dataNascValida = (() => {
+    const d = dataNascimento.trim();
+    if (!d || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const dt = new Date(d);
+    return dt.getTime() <= hoje.getTime();
+  })();
+
+  const nomesValidos =
+    caracteresNomeValidos(nomeCompleto) &&
+    caracteresNomeValidos(nomeSocial) &&
+    caracteresNomeValidos(nomeMae) &&
+    caracteresNomeValidos(nomePai);
+
+  const cpfValido = cpfDigits.length < 11 ? null : validarCPF(cpf);
+  const cnsValido = cnsDigits.length < 15 ? null : validarCNS(cns);
+
+  const canSubmitStep1 =
     temCpfOuCns &&
+    (cpfDigits.length !== 11 || cpfValido === null) &&
+    (cnsDigits.length !== 15 || cnsValido === null) &&
     nomeCompleto.trim().length > 0 &&
     nomeCompleto.trim().length <= 70 &&
+    nomesValidos &&
     (nomeMaeIgnorada || nomeMae.trim() !== "") &&
     (nomePaiIgnorado || nomePai.trim() !== "") &&
     dataNascimento.trim() !== "" &&
-    telefonePrincipalOk &&
+    dataNascValida &&
+    racaCor.trim() !== "" &&
+    sexo.trim() !== "" &&
+    (!possuiDeficiencia || deficienciaTipos.length > 0 || deficiencia.trim() !== "");
+
+  const canSubmitStep2 =
+    temCelularOuResidencial &&
     emailOk &&
+    cep.replace(/\D/g, "").length === 8 &&
     logradouro.trim() !== "" &&
     (numeroSemNumero || numero.trim() !== "") &&
     bairro.trim() !== "" &&
-    cep.replace(/\D/g, "").length === 8 &&
+    municipio.trim() !== "" &&
+    tipoLogradouro.trim() !== "" &&
+    distritoId !== "" &&
+    ubsId !== "";
+
+  const canSubmitStep3 =
     descobrimento !== "" &&
     programaSocial !== "" &&
     dumOk &&
-    nisOk &&
-    ubsId !== "";
+    nisOk;
+
+  const senhaTrim = senha.trim();
+  const senhaConfirmaTrim = senhaConfirma.trim();
+  const canSubmitStep4 =
+    senhaTrim.length >= 6 &&
+    senhaTrim.length <= 15 &&
+    senhaTrim === senhaConfirmaTrim;
+
+  /** Lista o que falta na etapa atual (ajuda o usuário). */
+  const faltando: string[] = [];
+  if (etapa === 1) {
+    if (!temCpfOuCns) faltando.push("CPF (11 dígitos) ou CNS (15 dígitos)");
+    else if (cpfDigits.length === 11 && cpfValido) faltando.push("CPF inválido");
+    else if (cnsDigits.length === 15 && cnsValido) faltando.push("CNS inválido");
+    if (!nomeCompleto.trim()) faltando.push("Nome completo");
+    if (!nomesValidos && nomeCompleto.trim()) faltando.push("Existem caracteres inválidos nos nomes");
+    if (!nomeMaeIgnorada && !nomeMae.trim()) faltando.push("Nome da Mãe (ou marque Ignorada)");
+    if (!nomePaiIgnorado && !nomePai.trim()) faltando.push("Nome do Pai (ou marque Ignorado)");
+    if (!dataNascimento.trim()) faltando.push("Data de nascimento");
+    if (dataNascimento.trim() && !dataNascValida) faltando.push("Data inválida");
+    if (!racaCor.trim()) faltando.push("Raça/Cor");
+    if (!sexo.trim()) faltando.push("Sexo");
+    if (possuiDeficiencia && !deficienciaTipos.length && !deficiencia.trim()) faltando.push("Deficiência (selecione ao menos um tipo)");
+  }
+  if (etapa === 2) {
+    if (!temCelularOuResidencial) faltando.push("Telefone Celular Principal ou Telefone Residencial (DDD + número)");
+    if (!emailOk) faltando.push("E-mail válido (com @ e ponto) ou deixe em branco");
+    if (cep.replace(/\D/g, "").length !== 8) faltando.push("CEP (8 dígitos)");
+    if (!logradouro.trim()) faltando.push("Nome do Logradouro");
+    if (!numeroSemNumero && !numero.trim()) faltando.push("Número (ou marque S/N)");
+    if (!bairro.trim()) faltando.push("Bairro");
+    if (!municipio.trim()) faltando.push("Município de Residência");
+    if (!tipoLogradouro.trim()) faltando.push("Tipo de Logradouro");
+    if (!distritoId) faltando.push("Distrito Sanitário");
+    if (!ubsId) faltando.push("UBS de Vinculação");
+  }
+  if (etapa === 3) {
+    if (!descobrimento) faltando.push("Como descobriu a gestação");
+    if (!programaSocial) faltando.push("Programa social");
+    if (!nisOk) faltando.push("NIS (11 dígitos, obrigatório para Bolsa Família)");
+    if (!dumOk) faltando.push("DUM inválida (entre 7 e 294 dias atrás)");
+  }
+  if (etapa === 4) {
+    if (senhaTrim.length < 6 || senhaTrim.length > 15) faltando.push("Senha entre 6 e 15 caracteres");
+    if (senhaTrim !== senhaConfirmaTrim && senhaConfirmaTrim) faltando.push("As senhas não coincidem");
+    if (!senhaTrim) faltando.push("Crie uma senha");
+    if (!senhaConfirmaTrim) faltando.push("Confirme a senha");
+  }
+
+  const canSubmit =
+    (etapa === 1 && canSubmitStep1) ||
+    (etapa === 2 && canSubmitStep2) ||
+    (etapa === 3 && canSubmitStep3) ||
+    (etapa === 4 && canSubmitStep4);
+
+  function handleCancelar() {
+    router.push("/gestante/login");
+  }
+
+  function handleVoltar() {
+    if (etapa > 1) setEtapa((e) => (e - 1) as 1 | 2 | 3 | 4);
+  }
+
+  function handleContinuar() {
+    setErroNotificacao("");
+    if (etapa === 1 && !canSubmitStep1) return;
+    if (etapa === 2 && !canSubmitStep2) return;
+    if (etapa === 3 && !canSubmitStep3) return;
+    if (etapa < 4) setEtapa((e) => (e + 1) as 1 | 2 | 3 | 4);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!canSubmit || enviando) return;
+    if (etapa !== 4) return;
+    if (!canSubmitStep4 || enviando) return;
     setErroEnvio("");
     setErroSenha("");
     setErroDum("");
@@ -272,15 +378,13 @@ function CadastrarGestanteContent() {
     }
     const senhaTrim = senha.trim();
     const confirmaTrim = senhaConfirma.trim();
-    if (senhaTrim.length > 0 || confirmaTrim.length > 0) {
-      if (senhaTrim.length < 6 || senhaTrim.length > 15) {
-        setErroSenha("A senha deve ter o mínimo de 6 e máximo de 15 caracteres");
-        return;
-      }
-      if (senhaTrim !== confirmaTrim) {
-        setErroSenha("As senhas não coincidem");
-        return;
-      }
+    if (senhaTrim.length < 6 || senhaTrim.length > 15) {
+      setErroSenha("A senha deve ter o mínimo de 6 e máximo de 15 caracteres");
+      return;
+    }
+    if (senhaTrim !== confirmaTrim) {
+      setErroSenha("As senhas não coincidem");
+      return;
     }
     setEnviando(true);
     const cpfDig = cpf.replace(/\D/g, "").slice(0, 11);
@@ -434,14 +538,14 @@ function CadastrarGestanteContent() {
       const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
       const data = (await res.json()) as { erro?: boolean; logradouro?: string; bairro?: string; localidade?: string; uf?: string };
       if (data.erro) {
-        setErroCep("CEP não localizado.");
-        setCepBuscando(false);
+setErroCep("CEP não localizado. Entre em contato com a unidade de saúde.");
+      setCepBuscando(false);
         return;
       }
       const localidade = (data.localidade ?? "").trim();
       const uf = (data.uf ?? "").trim();
       if (localidade.toUpperCase() !== "SALVADOR" || uf.toUpperCase() !== "BA") {
-        setErroCep("CEP fora de Salvador.");
+        setErroCep("Só é permitido CEP do município de Salvador.");
         setCepBuscando(false);
         return;
       }
@@ -455,7 +559,7 @@ function CadastrarGestanteContent() {
       else if (/^Travessa\s/i.test(log)) setTipoLogradouro("Travessa");
       else setTipoLogradouro("");
     } catch {
-      setErroCep("CEP não localizado.");
+      setErroCep("CEP não localizado. Entre em contato com a unidade de saúde.");
     }
     setCepBuscando(false);
   }
@@ -479,8 +583,18 @@ function CadastrarGestanteContent() {
 
         <Card className="bg-white/95 backdrop-blur shadow-2xl border-0">
           <CardContent className="pt-6">
+            <div className="flex items-center justify-between gap-4 mb-6 pb-4 border-b">
+              <p className="text-sm font-medium text-muted-foreground">
+                {ETAPAS[etapa - 1].titulo}
+              </p>
+              <Badge variant="outline">
+                Página {etapa} de 4
+              </Badge>
+            </div>
+
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* ── Dados Pessoais (doc. Cadastro Gestante Página 1) ── */}
+              {/* ── Página 1: Dados Pessoais (doc. Cadastro Gestante Página 1) ── */}
+              {etapa === 1 && (
               <Card className="bg-muted/30 border-0 shadow-none">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm">Dados Pessoais</CardTitle>
@@ -497,7 +611,11 @@ function CadastrarGestanteContent() {
                         value={cpf}
                         onChange={(e) => setCpf(formatCpf(e.target.value))}
                         maxLength={14}
+                        className={cpfDigits.length === 11 && cpfValido ? "border-destructive" : ""}
                       />
+                      {cpfDigits.length === 11 && cpfValido && (
+                        <p className="text-sm text-destructive">{cpfValido}</p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="cns">
@@ -509,7 +627,11 @@ function CadastrarGestanteContent() {
                         value={cns}
                         onChange={(e) => setCns(e.target.value.replace(/\D/g, "").slice(0, 15))}
                         maxLength={15}
+                        className={cnsDigits.length === 15 && cnsValido ? "border-destructive" : ""}
                       />
+                      {cnsDigits.length === 15 && cnsValido && (
+                        <p className="text-sm text-destructive">{cnsValido}</p>
+                      )}
                     </div>
                   </div>
 
@@ -523,7 +645,11 @@ function CadastrarGestanteContent() {
                       value={nomeCompleto}
                       onChange={(e) => setNomeCompleto(e.target.value.slice(0, 70))}
                       maxLength={70}
+                      className={nomeCompleto.trim() && !caracteresNomeValidos(nomeCompleto) ? "border-destructive" : ""}
                     />
+                    {nomeCompleto.trim() && !caracteresNomeValidos(nomeCompleto) && (
+                      <p className="text-sm text-destructive">Existem caracteres inválidos</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -603,7 +729,7 @@ function CadastrarGestanteContent() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Raça/Cor</Label>
+                      <Label>Raça/Cor <span className="text-red-500">*</span></Label>
                       <Select value={racaCor} onValueChange={setRacaCor}>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione" />
@@ -618,7 +744,7 @@ function CadastrarGestanteContent() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Sexo</Label>
+                      <Label>Sexo <span className="text-red-500">*</span></Label>
                       <Select value={sexo} onValueChange={setSexo}>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione" />
@@ -727,7 +853,11 @@ function CadastrarGestanteContent() {
                         type="date"
                         value={dataNascimento}
                         onChange={(e) => setDataNascimento(e.target.value)}
+                        className={dataNascimento.trim() && !dataNascValida ? "border-destructive" : ""}
                       />
+                      {dataNascimento.trim() && !dataNascValida && (
+                        <p className="text-sm text-destructive">Data inválida</p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="municipio-nascimento">Município de nascimento</Label>
@@ -743,8 +873,11 @@ function CadastrarGestanteContent() {
                   </div>
                 </CardContent>
               </Card>
+              )}
 
-              {/* ── Contatos (doc. Cadastro Gestante Página 2) ── */}
+              {/* ── Página 2: Contatos e Endereço (doc. Cadastro Gestante Página 2) ── */}
+              {etapa === 2 && (
+              <>
               <Card className="bg-muted/30 border-0 shadow-none">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm">Contatos</CardTitle>
@@ -993,8 +1126,12 @@ function CadastrarGestanteContent() {
                   </div>
                 </CardContent>
               </Card>
+              </>
+              )}
 
-              {/* ── Dados da gestação atual (doc. Cadastro Gestante Página 3) ── */}
+              {/* ── Página 3: Dados da gestação, Perfil social, Antecedentes, Saúde ── */}
+              {etapa === 3 && (
+              <>
               <Card className="bg-muted/30 border-0 shadow-none">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm">Dados da gestação atual</CardTitle>
@@ -1214,18 +1351,21 @@ function CadastrarGestanteContent() {
                   </div>
                 </CardContent>
               </Card>
+              </>
+              )}
 
-              {/* ── Senha de Acesso (doc item 5 página 4) ── */}
+              {/* ── Página 4: Senha de Acesso (doc. Cadastro Gestante Página 4) ── */}
+              {etapa === 4 && (
               <Card className="bg-muted/30 border-0 shadow-none">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm">Senha de Acesso</CardTitle>
                   <p className="text-xs text-muted-foreground">
-                    Opcional. Defina uma senha para acessar o sistema depois (6 a 15 caracteres).
+                    Crie uma senha para acessar o sistema (6 a 15 caracteres). Obrigatório.
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="senha">Crie uma senha</Label>
+                    <Label htmlFor="senha">Crie uma senha <span className="text-red-500">*</span></Label>
                     <Input
                       id="senha"
                       type="password"
@@ -1236,7 +1376,7 @@ function CadastrarGestanteContent() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="senha-confirma">Confirme a senha</Label>
+                    <Label htmlFor="senha-confirma">Confirme a senha <span className="text-red-500">*</span></Label>
                     <Input
                       id="senha-confirma"
                       type="password"
@@ -1251,8 +1391,14 @@ function CadastrarGestanteContent() {
                   )}
                 </CardContent>
               </Card>
+              )}
 
-              {/* ── Submit ── */}
+              {/* ── Mensagens e botões ── */}
+              {erroNotificacao && (
+                <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">
+                  {erroNotificacao}
+                </p>
+              )}
               {erroEnvio && (
                 <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">
                   {erroEnvio}
@@ -1263,14 +1409,43 @@ function CadastrarGestanteContent() {
                   Para continuar, preencha: <strong>{faltando.join("; ")}</strong>
                 </p>
               )}
-              <div className="flex gap-3 justify-end">
-                <Button
-                  type="submit"
-                  disabled={!canSubmit || enviando}
-                  size="lg"
-                >
-                  {enviando ? "Salvando…" : "Continuar"}
-                </Button>
+              <div className="flex flex-wrap gap-3 justify-between pt-2">
+                <div className="flex gap-2">
+                  {etapa > 1 && (
+                    <Button type="button" variant="outline" onClick={handleVoltar} size="lg">
+                      <ChevronLeft className="w-4 h-4 mr-1" />
+                      Voltar
+                    </Button>
+                  )}
+                  <Button type="button" variant="outline" onClick={handleCancelar} size="lg">
+                    Cancelar
+                  </Button>
+                </div>
+                <div>
+                  {etapa < 4 ? (
+                    <Button
+                      type="button"
+                      onClick={handleContinuar}
+                      disabled={
+                        etapa === 1 ? !canSubmitStep1 :
+                        etapa === 2 ? !canSubmitStep2 :
+                        !canSubmitStep3
+                      }
+                      size="lg"
+                    >
+                      Continuar
+                      <ChevronRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  ) : (
+                    <Button
+                      type="submit"
+                      disabled={!canSubmitStep4 || enviando}
+                      size="lg"
+                    >
+                      {enviando ? "Salvando…" : "Finalizar Cadastro"}
+                    </Button>
+                  )}
+                </div>
               </div>
             </form>
           </CardContent>
