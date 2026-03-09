@@ -34,7 +34,7 @@ No servidor, escolha a pasta onde o projeto ficará (ex.: `C:\inetpub\mae-salvad
 
 ```powershell
 cd C:\caminho\da\pasta
-git clone https://github.com/diegoferna/mae-salvador.git mae-salvador-mvp
+git clone https://github.com/sms-ssa/mae-salvador.git mae-salvador-mvp
 cd mae-salvador-mvp
 ```
 
