@@ -219,40 +219,21 @@ export function useCadastroGestante() {
     }
     setCepBuscando(true);
     try {
-      const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
-      const data = (await res.json()) as { erro?: boolean; logradouro?: string; bairro?: string; localidade?: string; uf?: string };
-      if (data.erro) {
-        setErroCep("CEP não localizado. Entre em contato com a unidade de saúde.");
+      const res = await fetch(`/api/cep/buscar?cep=${digits}`);
+      const data = (await res.json()) as { ok?: boolean; erro?: string; tipoLogradouro?: string; logradouro?: string; bairro?: string; localidade?: string; uf?: string };
+      if (!res.ok || !data.ok) {
+        setErroCep(data.erro ?? "CEP não localizado. Entre em contato com a unidade de saúde.");
         setCepBuscando(false);
         return;
       }
+      const tipoLogradouro = (data.tipoLogradouro ?? "").trim();
+      const logradouro = (data.logradouro ?? "").trim();
+      const bairro = (data.bairro ?? "").trim();
       const localidade = (data.localidade ?? "").trim();
-      const uf = (data.uf ?? "").trim();
-      if (localidade.toUpperCase() !== "SALVADOR" || uf.toUpperCase() !== "BA") {
-        setErroCep("Só é permitido CEP do município de Salvador.");
-        setCepBuscando(false);
-        return;
-      }
-      const logCompleto = (data.logradouro ?? "").trim();
-      let tipoLogradouro = "";
-      let logradouroSemTipo = logCompleto;
-      if (/^Rua\s+/i.test(logCompleto)) {
-        tipoLogradouro = "Rua";
-        logradouroSemTipo = logCompleto.replace(/^Rua\s+/i, "").trim();
-      } else if (/^Avenida\s+/i.test(logCompleto)) {
-        tipoLogradouro = "Avenida";
-        logradouroSemTipo = logCompleto.replace(/^Avenida\s+/i, "").trim();
-      } else if (/^Praça\s+/i.test(logCompleto)) {
-        tipoLogradouro = "Praça";
-        logradouroSemTipo = logCompleto.replace(/^Praça\s+/i, "").trim();
-      } else if (/^Travessa\s+/i.test(logCompleto)) {
-        tipoLogradouro = "Travessa";
-        logradouroSemTipo = logCompleto.replace(/^Travessa\s+/i, "").trim();
-      }
       setForm((prev) => ({
         ...prev,
-        logradouro: logradouroSemTipo || logCompleto,
-        bairro: (data.bairro ?? "").trim(),
+        logradouro,
+        bairro,
         municipio: localidade,
         tipoLogradouro,
       }));
