@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { mapPacienteBaseFederalToDadosCadastro } from "@mae-salvador/shared";
 import {
@@ -107,6 +107,7 @@ export function useCadastroGestante() {
   const [confirmacaoCarregando, setConfirmacaoCarregando] = useState(false);
   const [confirmacaoData, setConfirmacaoData] = useState<ConfirmacaoData>(null);
   const [pacienteLocalizado, setPacienteLocalizado] = useState(false);
+  const lastAutoCepLookupRef = useRef<string>("");
 
   const updateField = useCallback(<K extends keyof FormCadastroGestante>(key: K, value: FormCadastroGestante[K]) => {
     setForm((prev) => {
@@ -210,7 +211,8 @@ export function useCadastroGestante() {
     if (etapa < 4) setEtapa((e) => (e + 1) as 1 | 2 | 3 | 4);
   }, [etapa, canSubmitStep1, canSubmitStep2, canSubmitStep3]);
 
-  const pesquisarCep = useCallback(async () => {
+  const pesquisarCep = useCallback(async (opts?: { force?: boolean }) => {
+    const force = opts?.force ?? true;
     const digits = form.cep.replace(/\D/g, "").trim();
     setErroCep("");
     if (digits.length !== 8) {
@@ -232,16 +234,26 @@ export function useCadastroGestante() {
       const localidade = (data.localidade ?? "").trim();
       setForm((prev) => ({
         ...prev,
-        logradouro,
-        bairro,
-        municipio: localidade,
-        tipoLogradouro,
+        tipoLogradouro: force ? tipoLogradouro : (prev.tipoLogradouro || tipoLogradouro),
+        logradouro: force ? logradouro : (prev.logradouro || logradouro),
+        bairro: force ? bairro : (prev.bairro || bairro),
+        municipio: force ? localidade : (prev.municipio || localidade),
       }));
     } catch {
       setErroCep("CEP não localizado. Entre em contato com a unidade de saúde.");
     }
     setCepBuscando(false);
   }, [form.cep]);
+
+  useEffect(() => {
+    if (!pacienteLocalizado) return;
+    const digits = form.cep.replace(/\D/g, "").trim();
+    if (digits.length !== 8) return;
+    if (lastAutoCepLookupRef.current === digits) return;
+    if (form.tipoLogradouro || form.logradouro || form.bairro || form.municipio) return;
+    lastAutoCepLookupRef.current = digits;
+    void pesquisarCep({ force: false });
+  }, [pacienteLocalizado, form.cep, form.tipoLogradouro, form.logradouro, form.bairro, form.municipio, pesquisarCep]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {

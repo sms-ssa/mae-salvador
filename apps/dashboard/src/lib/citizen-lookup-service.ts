@@ -1,6 +1,6 @@
 /**
- * Serviço orquestrador da busca de cidadão: consulta primeiro o CNS Federal (CADSUS SOAP),
- * se não encontrar consulta o e-SUS (PostgreSQL). Retorna um único DTO para o frontend.
+ * Serviço orquestrador da busca de cidadão: consulta primeiro o e-SUS (PostgreSQL),
+ * se não encontrar consulta o CNS Federal (CADSUS SOAP). Retorna um único DTO para o frontend.
  */
 
 import type { CitizenDto } from "@mae-salvador/shared";
@@ -13,38 +13,31 @@ function onlyDigits(s: string, maxLen: number): string {
 
 /**
  * Busca cidadão por CPF (11 dígitos) ou CNS (15 dígitos).
- * 1) Tenta CNS Federal (CADSUS SOAP); 2) Se não encontrar, tenta e-SUS; 3) Retorna null se não encontrar em nenhum.
+ * 1) Tenta e-SUS (PostgreSQL); 2) Se não encontrar, tenta CNS Federal (CADSUS SOAP); 3) Retorna null se não encontrar em nenhum.
  * Logs no console indicam a origem dos dados.
  */
-export async function getCitizenByCpfOrCns(document: string): Promise<CitizenDto | null> {
+export async function getCitizenByCpfOrCns(
+  document: string,
+): Promise<CitizenDto | null> {
   const doc = onlyDigits(document, 15);
   if (doc.length !== 11 && doc.length !== 15) {
     return null;
   }
-
-  console.log("[CitizenLookup] Buscando cidadão no CNS Federal (CADSUS SOAP)");
   let citizen: CitizenDto | null = null;
-  try {
-    citizen = await soapCitizenProvider.getCitizenByCpfOrCns(document);
-    if (citizen != null) {
-      console.log("[CitizenLookup] Cidadão encontrado no CADSUS");
-      return citizen;
-    }
-  } catch (e) {
-    console.warn("[CitizenLookup] Erro ao consultar CADSUS SOAP:", e instanceof Error ? e.message : String(e));
-  }
-
-  console.log("[CitizenLookup] Não encontrado no CADSUS, consultando e-SUS (PostgreSQL)");
   try {
     citizen = await esusCitizenProvider.getCitizenByCpfOrCns(document);
     if (citizen != null) {
-      console.log("[CitizenLookup] Cidadão encontrado no e-SUS");
       return citizen;
     }
-  } catch (e) {
-    console.warn("[CitizenLookup] Erro ao consultar e-SUS (PostgreSQL):", e instanceof Error ? e.message : String(e));
+  } catch {
+  }
+  try {
+    citizen = await soapCitizenProvider.getCitizenByCpfOrCns(document);
+    if (citizen != null) {
+      return citizen;
+    }
+  } catch {
   }
 
-  console.log("[CitizenLookup] Cidadão não encontrado em nenhuma base");
   return null;
 }

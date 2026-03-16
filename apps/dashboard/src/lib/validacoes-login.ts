@@ -3,6 +3,8 @@
  * Conforme documento de requisitos: 11 dígitos = CPF, 15 dígitos = CNS.
  */
 
+import { validateCNS } from "@/lib/validateCNS";
+
 function apenasDigitos(s: string): string {
   return (s || "").replace(/\D/g, "");
 }
@@ -27,18 +29,7 @@ export function validarCPF(cpf: string): string | null {
 export function validarCNS(cns: string): string | null {
   const d = apenasDigitos(cns);
   if (d.length !== 15) return "CNS deve conter 15 dígitos.";
-  const primeiro = parseInt(d[0], 10);
-  if (primeiro >= 7) {
-    let soma = 0;
-    for (let i = 0; i < 15; i++) soma += parseInt(d[i], 10) * (i + 1);
-    if (soma % 11 !== 0) return "CNS inválido.";
-  } else if (primeiro >= 1 && primeiro <= 2) {
-    let soma = 0;
-    for (let i = 0; i < 15; i++) soma += parseInt(d[i], 10) * (15 - i);
-    if (soma % 11 !== 0) return "CNS inválido.";
-  } else {
-    return "CNS inválido.";
-  }
+  if (!validateCNS(d)) return "CNS inválido.";
   return null;
 }
 

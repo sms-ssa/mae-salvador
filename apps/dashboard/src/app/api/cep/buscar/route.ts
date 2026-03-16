@@ -18,7 +18,8 @@ function getEsusPool(): Pool | null {
 }
 
 export async function GET(req: NextRequest) {
-  const cep = req.nextUrl.searchParams.get("cep")?.replace(/\D/g, "").slice(0, 8) ?? "";
+  const cep =
+    req.nextUrl.searchParams.get("cep")?.replace(/\D/g, "").slice(0, 8) ?? "";
 
   if (cep.length !== 8) {
     return NextResponse.json({ erro: "CEP inválido." }, { status: 400 });
@@ -26,7 +27,10 @@ export async function GET(req: NextRequest) {
 
   const pool = getEsusPool();
   if (!pool) {
-    return NextResponse.json({ erro: "Banco e-SUS não configurado." }, { status: 503 });
+    return NextResponse.json(
+      { erro: "Banco e-SUS não configurado." },
+      { status: 503 },
+    );
   }
 
   try {
@@ -55,9 +59,11 @@ export async function GET(req: NextRequest) {
     const row = result.rows?.[0] as Record<string, unknown> | undefined;
 
     if (!row) {
-      return NextResponse.json({ erro: "CEP não localizado." }, { status: 404 });
+      return NextResponse.json(
+        { erro: "CEP não localizado." },
+        { status: 404 },
+      );
     }
-
     return NextResponse.json({
       ok: true,
       cep: String(row.cep ?? "").trim(),
@@ -68,6 +74,9 @@ export async function GET(req: NextRequest) {
       uf: String(row.uf ?? "").trim(),
     });
   } catch {
-    return NextResponse.json({ erro: "Erro ao consultar CEP." }, { status: 500 });
+    return NextResponse.json(
+      { erro: "Erro ao consultar CEP." },
+      { status: 500 },
+    );
   }
 }

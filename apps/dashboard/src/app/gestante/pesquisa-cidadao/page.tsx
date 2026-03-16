@@ -62,7 +62,7 @@ export default function PesquisaCidadaoPage() {
       if (verificarRes.ok && verificarData.existe) {
         try {
           sessionStorage.setItem("gestante_login_flash", "Já existe um usuário com o CPF/CNS informado. Acesse sua conta");
-        } catch (_) {}
+        } catch {}
         router.push("/gestante/login");
         setCarregando(false);
         return;
@@ -73,18 +73,27 @@ export default function PesquisaCidadaoPage() {
         return;
       }
       const res = await fetch(`/api/cns/buscar?cpf=${encodeURIComponent(dig)}`);
-      const data = await res.json();
-      if (data.sucesso && data.paciente) {
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setNotificacao(data?.mensagem ?? "Erro ao consultar a base federal. Tente novamente.");
+        setBuscaAlternativa("cns");
+        setCarregando(false);
+        return;
+      }
+      if (data?.sucesso && data?.paciente) {
         try {
           sessionStorage.setItem("cnsPaciente", JSON.stringify(data.paciente));
-        } catch (_) {}
+        } catch {}
         router.push("/gestante/cadastrar?fromCns=1");
         setCarregando(false);
         return;
       }
-      setNotificacao("Cidadão(ã) não localizado(a) na base federal. Use a busca alternativa abaixo.");
+      setNotificacao(
+        data?.mensagem ??
+          "Cidadão(ã) não localizado(a) na base federal. Use a busca alternativa abaixo.",
+      );
       setBuscaAlternativa("cns");
-    } catch (_) {
+    } catch {
       router.push("/gestante/cadastrar");
     }
     setCarregando(false);
@@ -115,7 +124,7 @@ export default function PesquisaCidadaoPage() {
       if (verificarData.existe) {
         try {
           sessionStorage.setItem("gestante_login_flash", "Já existe um usuário com o CPF/CNS informado. Acesse sua conta");
-        } catch (_) {}
+        } catch {}
         router.push("/gestante/login");
         setCarregando(false);
         return;
@@ -125,12 +134,12 @@ export default function PesquisaCidadaoPage() {
       if (data.sucesso && data.paciente) {
         try {
           sessionStorage.setItem("cnsPaciente", JSON.stringify(data.paciente));
-        } catch (_) {}
+        } catch {}
         router.push("/gestante/cadastrar?fromCns=1");
       } else {
         router.push("/gestante/cadastrar");
       }
-    } catch (_) {
+    } catch {
       router.push("/gestante/cadastrar");
     }
     setCarregando(false);
@@ -180,7 +189,7 @@ export default function PesquisaCidadaoPage() {
       if (verificarData.existe) {
         try {
           sessionStorage.setItem("gestante_login_flash", "Já existe um usuário com o CPF/CNS informado. Acesse sua conta");
-        } catch (_) {}
+        } catch {}
         router.push("/gestante/login");
       } else {
         try {
@@ -192,10 +201,10 @@ export default function PesquisaCidadaoPage() {
               dataNascimento: dataNascAlt.trim() || undefined,
             })
           );
-        } catch (_) {}
+        } catch {}
         router.push("/gestante/cadastrar?fromDados=1");
       }
-    } catch (_) {
+    } catch {
       router.push("/gestante/cadastrar");
     }
     setCarregando(false);

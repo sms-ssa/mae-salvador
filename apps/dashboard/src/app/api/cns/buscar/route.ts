@@ -6,7 +6,7 @@ import { getCitizenByCpfOrCns } from "@/lib/citizen-lookup-service";
 /**
  * GET /api/cns/buscar?cpf=... ou ?cns=...
  *
- * Busca cidadão: 1) e-SUS (SQL Server), 2) CADSUS SOAP se não encontrar.
+ * Busca cidadão: 1) e-SUS (PostgreSQL), 2) CADSUS SOAP se não encontrar.
  * Resposta: ResultadoPesquisaBaseFederal (sucesso, paciente?, mensagem?).
  * Use mapPacienteBaseFederalToDadosCadastro(@mae-salvador/shared) para pré-preencher o cadastro.
  */
@@ -25,42 +25,38 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  if (!isCnsFederalConfigured()) {
-    return NextResponse.json({
-      cnsConfigurado: false,
-      sucesso: false,
-      paciente: null,
-      mensagem:
-        "Integração CNS Federal não configurada. Defina CNS_FEDERAL_USER e CNS_FEDERAL_PASSWORD no .env",
-    });
-  }
+  // Mesmo sem CNS Federal configurado, ainda podemos buscar no e-SUS (PostgreSQL).
+  // A integração CADSUS SOAP pode falhar internamente e será tratada pelo serviço.
+  const cnsConfigurado = isCnsFederalConfigured();
 
   try {
     const citizen = await getCitizenByCpfOrCns(doc);
     const paciente = citizenDtoToPacienteBaseFederal(citizen);
     if (paciente) {
       return NextResponse.json({
-        cnsConfigurado: true,
+        cnsConfigurado,
         sucesso: true,
         paciente,
       });
     }
     return NextResponse.json({
-      cnsConfigurado: true,
+      cnsConfigurado,
       sucesso: false,
       paciente: null,
-      mensagem: "Cidadão não encontrado na base e-SUS nem no CADSUS.",
+      mensagem: cnsConfigurado
+        ? "Cidadão não encontrado na base e-SUS nem no CADSUS."
+        : "Cidadão não encontrado na base e-SUS. (Integração CNS Federal não configurada.)",
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     return NextResponse.json(
       {
-        cnsConfigurado: true,
+        cnsConfigurado,
         sucesso: false,
         paciente: null,
         mensagem: message,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
