@@ -17,6 +17,24 @@ import {
 const CNS_PACIENTE_KEY = "cnsPaciente";
 const DADOS_PACIENTE_BUSCA_ALT_KEY = "dadosPacienteBuscaAlt";
 
+/** Valores aceitos pelos selects de Raça/Cor e Sexo no formulário (precisam bater com StepDadosPessoais). */
+const RACA_COR_SELECT_VALUES = ["BRANCA", "PARDA", "PRETA", "AMARELA", "INDIGENA"];
+const SEXO_SELECT_VALUES = ["FEMININO", "MASCULINO", "INDETERMINADO"];
+
+function normalizeRacaCorForSelect(value: unknown): string {
+  const s = typeof value === "string" ? value : value != null ? String(value) : "";
+  if (!s.trim()) return "";
+  const v = s.trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return RACA_COR_SELECT_VALUES.includes(v) ? v : "";
+}
+
+function normalizeSexoForSelect(value: unknown): string {
+  const s = typeof value === "string" ? value : value != null ? String(value) : "";
+  if (!s.trim()) return "";
+  const v = s.trim().toUpperCase();
+  return SEXO_SELECT_VALUES.includes(v) ? v : "";
+}
+
 function formatCpfValue(value: string): string {
   const digits = value.replace(/\D/g, "").slice(0, 11);
   if (digits.length <= 3) return digits;
@@ -146,24 +164,35 @@ export function useCadastroGestante() {
         const paciente = JSON.parse(raw) as Parameters<typeof mapPacienteBaseFederalToDadosCadastro>[0];
         sessionStorage.removeItem(CNS_PACIENTE_KEY);
         const dados = mapPacienteBaseFederalToDadosCadastro(paciente);
-        const racaCorFederal = (dados as Record<string, unknown>).racaCor as string | undefined;
+        const telFederal = (dados as Record<string, unknown>).telefoneCelular as string | undefined;
+        const dddFederal = telFederal && String(telFederal).replace(/\D/g, "").length >= 2 ? String(telFederal).replace(/\D/g, "").slice(0, 2) : "";
+        const celularFederal = telFederal && String(telFederal).replace(/\D/g, "").length > 2 ? String(telFederal).replace(/\D/g, "").slice(2, 11) : "";
+        const racaCorVal = normalizeRacaCorForSelect((dados as Record<string, unknown>).racaCor);
+        const sexoVal = normalizeSexoForSelect(dados.sexo);
         setPacienteLocalizado(true);
         setForm((prev) => ({
           ...prev,
           cpf: dados.cpf ? formatCpfValue(dados.cpf) : prev.cpf,
           cns: dados.cns ?? prev.cns,
           nomeCompleto: dados.nomeCompleto ?? prev.nomeCompleto,
+          nomeSocial: dados.nomeSocial ?? prev.nomeSocial,
           nomeMae: dados.nomeMae ?? prev.nomeMae,
           nomePai: dados.nomePai ?? prev.nomePai,
           dataNascimento: dados.dataNascimento ?? prev.dataNascimento,
-          sexo: dados.sexo ?? prev.sexo,
-          racaCor: racaCorFederal ? String(racaCorFederal).toUpperCase() : prev.racaCor,
+          sexo: sexoVal || prev.sexo,
+          racaCor: racaCorVal || prev.racaCor,
+          identidadeGenero: dados.identidadeGenero ?? prev.identidadeGenero,
+          orientacaoSexual: dados.orientacaoSexual ?? prev.orientacaoSexual,
+          ddd: dddFederal || prev.ddd,
+          celularPrincipal: celularFederal || prev.celularPrincipal,
+          email: dados.email ?? prev.email,
           logradouro: dados.logradouro ?? prev.logradouro,
           numero: dados.numero && (dados.numero.toUpperCase() === "S/N" || dados.numero === "s/n") ? "" : (dados.numero ?? prev.numero),
           numeroSemNumero: !!(dados.numero && (dados.numero.toUpperCase() === "S/N" || dados.numero === "s/n")),
           complemento: dados.complemento ?? prev.complemento,
           bairro: dados.bairro ?? prev.bairro,
           cep: dados.cep ? formatCepValue(dados.cep) : prev.cep,
+          municipio: dados.municipio ?? prev.municipio,
         }));
       } catch {
         sessionStorage.removeItem(CNS_PACIENTE_KEY);

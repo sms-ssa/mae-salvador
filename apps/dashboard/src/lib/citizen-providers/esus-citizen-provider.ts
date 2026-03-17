@@ -1,6 +1,6 @@
 /**
  * Provider de cidadão que consulta o banco PostgreSQL do e-SUS (PEC).
- * Tabela principal: ta_cidadao.
+ * Tabela principal: tb_cidadao; JOIN tb_raca_cor para raça/cor.
  * Não altera o provider SOAP existente; implementa ICitizenProvider para o orquestrador.
  */
 
@@ -65,13 +65,15 @@ export const esusCitizenProvider: ICitizenProvider = {
     if (!pool) return null;
 
     try {
-      // PostgreSQL: LIMIT 1, REPLACE/COALESCE, parâmetro $1
-      // nu_cns = Cartão Nacional de Saúde (CNS), usado para preencher o formulário
       const query = `
         SELECT
-          c.nu_cpf AS cpf,
-          c.nu_cns AS cns,
-          c.no_cidadao AS nomecompleto,
+          c.nu_cns,
+          c.nu_cpf,
+          c.no_cidadao AS nome_civil,
+          c.no_social,
+          r.no_raca_cor AS raca_cor,
+          c.tp_identidade_genero,
+          c.tp_orientacao_sexual,
           c.no_mae AS nomemae,
           c.no_pai AS nomepai,
           c.dt_nascimento AS datanascimento,
@@ -84,12 +86,14 @@ export const esusCitizenProvider: ICitizenProvider = {
           c.ds_cep AS cep,
           c.ds_complemento AS complemento,
           c.co_localidade_endereco AS municipio
-        FROM ta_cidadao c
-        WHERE (
-          (length($1) = 11 AND replace(replace(replace(coalesce(c.nu_cpf, ''), '.', ''), '-', ''), ' ', '') = $1)
-          OR
-          (length($1) = 15 AND replace(replace(replace(coalesce(c.nu_cns, ''), '.', ''), '-', ''), ' ', '') = $1)
-        )
+        FROM tb_cidadao c
+        LEFT JOIN tb_raca_cor r ON c.co_raca_cor = r.co_raca_cor
+        WHERE c.st_ativo = 1
+          AND (
+            (length($1) = 11 AND replace(replace(replace(coalesce(c.nu_cpf, ''), '.', ''), '-', ''), ' ', '') = $1)
+            OR
+            (length($1) = 15 AND replace(replace(replace(coalesce(c.nu_cns, ''), '.', ''), '-', ''), ' ', '') = $1)
+          )
         LIMIT 1
       `;
 
@@ -97,12 +101,15 @@ export const esusCitizenProvider: ICitizenProvider = {
       const row = result.rows?.[0] as Record<string, unknown> | undefined;
       if (!row) return null;
 
-      // pg retorna colunas em minúsculo por padrão
       const get = (key: string) => row[key] ?? row[key.toLowerCase()];
       const dto: CitizenDto = {
-        cpf: trim(get("cpf")) ?? undefined,
-        cns: trim(get("cns")) ?? undefined,
-        nomeCompleto: trim(get("nomecompleto")) ?? undefined,
+        cpf: trim(get("nu_cpf")) ?? undefined,
+        cns: trim(get("nu_cns")) ?? undefined,
+        nomeCompleto: trim(get("nome_civil")) ?? undefined,
+        nomeSocial: trim(get("no_social")) ?? undefined,
+        racaCor: trim(get("raca_cor")) ?? undefined,
+        identidadeGenero: trim(get("tp_identidade_genero")) ?? undefined,
+        orientacaoSexual: trim(get("tp_orientacao_sexual")) ?? undefined,
         nomeMae: trim(get("nomemae")) ?? undefined,
         nomePai: trim(get("nomepai")) ?? undefined,
         dataNascimento: toISODate(get("datanascimento")) ?? undefined,
@@ -117,7 +124,7 @@ export const esusCitizenProvider: ICitizenProvider = {
         municipio: trim(get("municipio")) ?? undefined,
       };
       return dto;
-    } catch (e) {
+    } catch {
       return null;
     }
   },

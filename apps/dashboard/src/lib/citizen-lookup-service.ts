@@ -29,15 +29,13 @@ export async function getCitizenByCpfOrCns(
     if (citizen != null) {
       return citizen;
     }
-  } catch {
-  }
+  } catch {}
   try {
     citizen = await soapCitizenProvider.getCitizenByCpfOrCns(document);
     if (citizen != null) {
       return citizen;
     }
-  } catch {
-  }
+  } catch {}
 
   return null;
 }

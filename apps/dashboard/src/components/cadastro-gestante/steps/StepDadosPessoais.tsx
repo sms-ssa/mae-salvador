@@ -173,7 +173,7 @@ export function StepDadosPessoais({ form, updateField, erros, pacienteLocalizado
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Raça/Cor <span className="text-red-500">*</span></Label>
-            <Select value={form.racaCor} onValueChange={(v) => updateField("racaCor", v)}>
+            <Select key={`racaCor-${form.racaCor}`} value={form.racaCor || undefined} onValueChange={(v) => updateField("racaCor", v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
@@ -188,7 +188,7 @@ export function StepDadosPessoais({ form, updateField, erros, pacienteLocalizado
           </div>
           <div className="space-y-2">
             <Label>Sexo <span className="text-red-500">*</span></Label>
-            <Select value={form.sexo} onValueChange={(v) => updateField("sexo", v)}>
+            <Select key={`sexo-${form.sexo}`} value={form.sexo || undefined} onValueChange={(v) => updateField("sexo", v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
@@ -256,7 +256,7 @@ export function StepDadosPessoais({ form, updateField, erros, pacienteLocalizado
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Identidade de gênero</Label>
-            <Select value={form.identidadeGenero} onValueChange={(v) => updateField("identidadeGenero", v)}>
+            <Select value={form.identidadeGenero || undefined} onValueChange={(v) => updateField("identidadeGenero", v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
@@ -272,7 +272,7 @@ export function StepDadosPessoais({ form, updateField, erros, pacienteLocalizado
           </div>
           <div className="space-y-2">
             <Label>Orientação sexual</Label>
-            <Select value={form.orientacaoSexual} onValueChange={(v) => updateField("orientacaoSexual", v)}>
+            <Select value={form.orientacaoSexual || undefined} onValueChange={(v) => updateField("orientacaoSexual", v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
@@ -302,7 +302,7 @@ export function StepDadosPessoais({ form, updateField, erros, pacienteLocalizado
           </div>
           <div className="space-y-2">
             <Label htmlFor="municipio-nascimento">Município de nascimento</Label>
-            <Select value={form.municipioNascimento || ""} onValueChange={(v) => updateField("municipioNascimento", v)}>
+            <Select value={form.municipioNascimento || undefined} onValueChange={(v) => updateField("municipioNascimento", v)}>
               <SelectTrigger id="municipio-nascimento">
                 <SelectValue placeholder="Selecione o município" />
               </SelectTrigger>
