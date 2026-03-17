@@ -17,6 +17,29 @@ import {
 const CNS_PACIENTE_KEY = "cnsPaciente";
 const DADOS_PACIENTE_BUSCA_ALT_KEY = "dadosPacienteBuscaAlt";
 
+/** Forma do objeto retornado por mapPacienteBaseFederalToDadosCadastro (evita erro de tipo se o shared estiver em cache). */
+interface DadosPrefillFromFederal {
+  cpf?: string;
+  cns?: string;
+  nomeCompleto?: string;
+  nomeSocial?: string;
+  nomeMae?: string;
+  nomePai?: string;
+  dataNascimento?: string;
+  sexo?: string;
+  racaCor?: string;
+  identidadeGenero?: string;
+  orientacaoSexual?: string;
+  logradouro?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
+  cep?: string;
+  municipio?: string;
+  email?: string;
+  telefoneCelular?: string;
+}
+
 /** Valores aceitos pelos selects de Raça/Cor e Sexo no formulário (precisam bater com StepDadosPessoais). */
 const RACA_COR_SELECT_VALUES = ["BRANCA", "PARDA", "PRETA", "AMARELA", "INDIGENA"];
 const SEXO_SELECT_VALUES = ["FEMININO", "MASCULINO", "INDETERMINADO"];
@@ -163,11 +186,11 @@ export function useCadastroGestante() {
       try {
         const paciente = JSON.parse(raw) as Parameters<typeof mapPacienteBaseFederalToDadosCadastro>[0];
         sessionStorage.removeItem(CNS_PACIENTE_KEY);
-        const dados = mapPacienteBaseFederalToDadosCadastro(paciente);
-        const telFederal = (dados as Record<string, unknown>).telefoneCelular as string | undefined;
+        const dados = mapPacienteBaseFederalToDadosCadastro(paciente) as DadosPrefillFromFederal;
+        const telFederal = dados.telefoneCelular;
         const dddFederal = telFederal && String(telFederal).replace(/\D/g, "").length >= 2 ? String(telFederal).replace(/\D/g, "").slice(0, 2) : "";
         const celularFederal = telFederal && String(telFederal).replace(/\D/g, "").length > 2 ? String(telFederal).replace(/\D/g, "").slice(2, 11) : "";
-        const racaCorVal = normalizeRacaCorForSelect((dados as Record<string, unknown>).racaCor);
+        const racaCorVal = normalizeRacaCorForSelect(dados.racaCor);
         const sexoVal = normalizeSexoForSelect(dados.sexo);
         setPacienteLocalizado(true);
         setForm((prev) => ({
@@ -187,8 +210,8 @@ export function useCadastroGestante() {
           celularPrincipal: celularFederal || prev.celularPrincipal,
           email: dados.email ?? prev.email,
           logradouro: dados.logradouro ?? prev.logradouro,
-          numero: dados.numero && (dados.numero.toUpperCase() === "S/N" || dados.numero === "s/n") ? "" : (dados.numero ?? prev.numero),
-          numeroSemNumero: !!(dados.numero && (dados.numero.toUpperCase() === "S/N" || dados.numero === "s/n")),
+          numero: dados.numero && (dados.numero?.toUpperCase() === "S/N" || dados.numero === "s/n") ? "" : (dados.numero ?? prev.numero),
+          numeroSemNumero: !!(dados.numero && (dados.numero?.toUpperCase() === "S/N" || dados.numero === "s/n")),
           complemento: dados.complemento ?? prev.complemento,
           bairro: dados.bairro ?? prev.bairro,
           cep: dados.cep ? formatCepValue(dados.cep) : prev.cep,
