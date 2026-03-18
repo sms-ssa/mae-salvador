@@ -37,6 +37,8 @@ export async function GET(request: NextRequest) {
         cnsConfigurado,
         sucesso: true,
         paciente,
+
+        citizen,
       });
     }
     return NextResponse.json({

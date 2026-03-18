@@ -27,7 +27,9 @@ export default function PesquisaCidadaoPage() {
   const [cpf, setCpf] = useState("");
   const [erroCpf, setErroCpf] = useState("");
   const [naoPossui, setNaoPossui] = useState(false);
-  const [buscaAlternativa, setBuscaAlternativa] = useState<"cns" | "dados" | "">("");
+  const [buscaAlternativa, setBuscaAlternativa] = useState<
+    "cns" | "dados" | ""
+  >("");
   const [cnsAlt, setCnsAlt] = useState("");
   const [erroCns, setErroCns] = useState("");
   const [nomeCompletoAlt, setNomeCompletoAlt] = useState("");
@@ -57,32 +59,45 @@ export default function PesquisaCidadaoPage() {
     }
     setCarregando(true);
     try {
-      const verificarRes = await fetch(`/api/gestante/verificar?cpf=${encodeURIComponent(dig)}`);
+      const verificarRes = await fetch(
+        `/api/gestante/verificar?cpf=${encodeURIComponent(dig)}`,
+      );
       const verificarData = await verificarRes.json().catch(() => ({}));
       if (verificarRes.ok && verificarData.existe) {
         try {
-          sessionStorage.setItem("gestante_login_flash", "Já existe um usuário com o CPF/CNS informado. Acesse sua conta");
+          sessionStorage.setItem(
+            "gestante_login_flash",
+            "Já existe um usuário com o CPF/CNS informado. Acesse sua conta",
+          );
         } catch {}
         router.push("/gestante/login");
         setCarregando(false);
         return;
       }
       if (!verificarRes.ok) {
-        setNotificacao(verificarData.erro ?? "Erro ao verificar cadastro. Tente novamente.");
+        setNotificacao(
+          verificarData.erro ?? "Erro ao verificar cadastro. Tente novamente.",
+        );
         setCarregando(false);
         return;
       }
       const res = await fetch(`/api/cns/buscar?cpf=${encodeURIComponent(dig)}`);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setNotificacao(data?.mensagem ?? "Erro ao consultar a base federal. Tente novamente.");
+        setNotificacao(
+          data?.mensagem ??
+            "Erro ao consultar a base federal. Tente novamente.",
+        );
         setBuscaAlternativa("cns");
         setCarregando(false);
         return;
       }
       if (data?.sucesso && data?.paciente) {
         try {
-          sessionStorage.setItem("cnsPaciente", JSON.stringify(data.paciente));
+          sessionStorage.setItem(
+            "cnsPaciente",
+            JSON.stringify(data.citizen ?? data.paciente),
+          );
         } catch {}
         router.push("/gestante/cadastrar?fromCns=1");
         setCarregando(false);
@@ -119,11 +134,16 @@ export default function PesquisaCidadaoPage() {
     }
     setCarregando(true);
     try {
-      const verificarRes = await fetch(`/api/gestante/verificar?cns=${encodeURIComponent(dig)}`);
+      const verificarRes = await fetch(
+        `/api/gestante/verificar?cns=${encodeURIComponent(dig)}`,
+      );
       const verificarData = await verificarRes.json().catch(() => ({}));
       if (verificarData.existe) {
         try {
-          sessionStorage.setItem("gestante_login_flash", "Já existe um usuário com o CPF/CNS informado. Acesse sua conta");
+          sessionStorage.setItem(
+            "gestante_login_flash",
+            "Já existe um usuário com o CPF/CNS informado. Acesse sua conta",
+          );
         } catch {}
         router.push("/gestante/login");
         setCarregando(false);
@@ -133,7 +153,10 @@ export default function PesquisaCidadaoPage() {
       const data = await res.json().catch(() => ({}));
       if (data.sucesso && data.paciente) {
         try {
-          sessionStorage.setItem("cnsPaciente", JSON.stringify(data.paciente));
+          sessionStorage.setItem(
+            "cnsPaciente",
+            JSON.stringify(data.citizen ?? data.paciente),
+          );
         } catch {}
         router.push("/gestante/cadastrar?fromCns=1");
       } else {
@@ -165,7 +188,9 @@ export default function PesquisaCidadaoPage() {
       hasError = true;
     }
     if (!nomeMaeAlt.trim() && !dataNascAlt.trim()) {
-      setErroNomeMae("É necessário preencher Nome da Mãe e/ou Data de Nascimento");
+      setErroNomeMae(
+        "É necessário preencher Nome da Mãe e/ou Data de Nascimento",
+      );
       hasError = true;
     }
     const hoje = new Date().toISOString().slice(0, 10);
@@ -188,7 +213,10 @@ export default function PesquisaCidadaoPage() {
       const verificarData = await verificarRes.json().catch(() => ({}));
       if (verificarData.existe) {
         try {
-          sessionStorage.setItem("gestante_login_flash", "Já existe um usuário com o CPF/CNS informado. Acesse sua conta");
+          sessionStorage.setItem(
+            "gestante_login_flash",
+            "Já existe um usuário com o CPF/CNS informado. Acesse sua conta",
+          );
         } catch {}
         router.push("/gestante/login");
       } else {
@@ -199,7 +227,7 @@ export default function PesquisaCidadaoPage() {
               nomeCompleto: nomeCompletoAlt.trim(),
               nomeMae: nomeMaeAlt.trim() || undefined,
               dataNascimento: dataNascAlt.trim() || undefined,
-            })
+            }),
           );
         } catch {}
         router.push("/gestante/cadastrar?fromDados=1");
@@ -233,7 +261,10 @@ export default function PesquisaCidadaoPage() {
                 }`}
               >
                 {cadastroJaExiste && (
-                  <Info className="h-4 w-4 shrink-0 text-primary mt-0.5" aria-hidden />
+                  <Info
+                    className="h-4 w-4 shrink-0 text-primary mt-0.5"
+                    aria-hidden
+                  />
                 )}
                 <div className="min-w-0 space-y-2">
                   <p className="font-medium leading-snug">{notificacao}</p>
@@ -305,7 +336,10 @@ export default function PesquisaCidadaoPage() {
                 }}
                 className="rounded border-input"
               />
-              <Label htmlFor="nao-possui" className="cursor-pointer text-sm font-normal">
+              <Label
+                htmlFor="nao-possui"
+                className="cursor-pointer text-sm font-normal"
+              >
                 Não Possui (CPF)
               </Label>
             </div>
@@ -348,16 +382,25 @@ export default function PesquisaCidadaoPage() {
                         placeholder="15 dígitos"
                         value={cnsAlt}
                         onChange={(e) => {
-                          setCnsAlt(e.target.value.replace(/\D/g, "").slice(0, 15));
+                          setCnsAlt(
+                            e.target.value.replace(/\D/g, "").slice(0, 15),
+                          );
                           setErroCns("");
                         }}
                         className={erroCns ? "border-destructive" : ""}
                       />
-                      <Button type="button" size="icon" onClick={pesquisarAlternativaCns} disabled={carregando}>
+                      <Button
+                        type="button"
+                        size="icon"
+                        onClick={pesquisarAlternativaCns}
+                        disabled={carregando}
+                      >
                         <Search className="w-4 h-4" />
                       </Button>
                     </div>
-                    {erroCns && <p className="text-sm text-destructive">{erroCns}</p>}
+                    {erroCns && (
+                      <p className="text-sm text-destructive">{erroCns}</p>
+                    )}
                   </div>
                 )}
 
@@ -376,7 +419,11 @@ export default function PesquisaCidadaoPage() {
                         }}
                         className={erroNomeCompleto ? "border-destructive" : ""}
                       />
-                      {erroNomeCompleto && <p className="text-sm text-destructive">{erroNomeCompleto}</p>}
+                      {erroNomeCompleto && (
+                        <p className="text-sm text-destructive">
+                          {erroNomeCompleto}
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="mae-alt">Nome da Mãe</Label>
@@ -391,7 +438,11 @@ export default function PesquisaCidadaoPage() {
                         }}
                         className={erroNomeMae ? "border-destructive" : ""}
                       />
-                      {erroNomeMae && <p className="text-sm text-destructive">{erroNomeMae}</p>}
+                      {erroNomeMae && (
+                        <p className="text-sm text-destructive">
+                          {erroNomeMae}
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="nasc-alt">Data de Nascimento</Label>
@@ -405,9 +456,18 @@ export default function PesquisaCidadaoPage() {
                         }}
                         className={erroDataNasc ? "border-destructive" : ""}
                       />
-                      {erroDataNasc && <p className="text-sm text-destructive">{erroDataNasc}</p>}
+                      {erroDataNasc && (
+                        <p className="text-sm text-destructive">
+                          {erroDataNasc}
+                        </p>
+                      )}
                     </div>
-                    <Button type="button" onClick={pesquisarAlternativaDados} className="w-full" disabled={carregando}>
+                    <Button
+                      type="button"
+                      onClick={pesquisarAlternativaDados}
+                      className="w-full"
+                      disabled={carregando}
+                    >
                       {carregando ? "Pesquisando…" : "Pesquisar"}
                     </Button>
                   </div>

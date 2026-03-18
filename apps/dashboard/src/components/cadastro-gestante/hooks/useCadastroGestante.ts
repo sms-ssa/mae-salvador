@@ -40,19 +40,52 @@ interface DadosPrefillFromFederal {
   telefoneCelular?: string;
 }
 
+type CitizenPrefillLike = {
+  cpf?: unknown;
+  cns?: unknown;
+  nomeCompleto?: unknown;
+  nomeSocial?: unknown;
+  nomeMae?: unknown;
+  nomePai?: unknown;
+  dataNascimento?: unknown;
+  sexo?: unknown;
+  racaCor?: unknown;
+  identidadeGenero?: unknown;
+  orientacaoSexual?: unknown;
+  logradouro?: unknown;
+  numero?: unknown;
+  complemento?: unknown;
+  bairro?: unknown;
+  cep?: unknown;
+  municipio?: unknown;
+  email?: unknown;
+  telefoneCelular?: unknown;
+};
 /** Valores aceitos pelos selects de Raça/Cor e Sexo no formulário (precisam bater com StepDadosPessoais). */
-const RACA_COR_SELECT_VALUES = ["BRANCA", "PARDA", "PRETA", "AMARELA", "INDIGENA"];
+const RACA_COR_SELECT_VALUES = [
+  "BRANCA",
+  "PARDA",
+  "PRETA",
+  "AMARELA",
+  "INDIGENA",
+];
 const SEXO_SELECT_VALUES = ["FEMININO", "MASCULINO", "INDETERMINADO"];
 
 function normalizeRacaCorForSelect(value: unknown): string {
-  const s = typeof value === "string" ? value : value != null ? String(value) : "";
+  const s =
+    typeof value === "string" ? value : value != null ? String(value) : "";
   if (!s.trim()) return "";
-  const v = s.trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const v = s
+    .trim()
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
   return RACA_COR_SELECT_VALUES.includes(v) ? v : "";
 }
 
 function normalizeSexoForSelect(value: unknown): string {
-  const s = typeof value === "string" ? value : value != null ? String(value) : "";
+  const s =
+    typeof value === "string" ? value : value != null ? String(value) : "";
   if (!s.trim()) return "";
   const v = s.trim().toUpperCase();
   return SEXO_SELECT_VALUES.includes(v) ? v : "";
@@ -62,8 +95,22 @@ function formatCpfValue(value: string): string {
   const digits = value.replace(/\D/g, "").slice(0, 11);
   if (digits.length <= 3) return digits;
   if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
-  if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+  if (digits.length <= 9)
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
+function isCitizenPrefillLike(value: unknown): value is CitizenPrefillLike {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  // CitizenDto (e-SUS) usa `nomeCompleto`; PacienteBaseFederal (SOAP) usa `nome`.
+  // Se tiver `nomeCompleto` ou `racaCor`/`nomeSocial`, tratamos como DTO rico.
+  return (
+    "nomeCompleto" in v ||
+    "racaCor" in v ||
+    "nomeSocial" in v ||
+    "telefoneCelular" in v
+  );
 }
 
 function formatCepValue(value: string): string {
@@ -130,7 +177,11 @@ const INITIAL_FORM: FormCadastroGestante = {
 export type ConfirmacaoData =
   | null
   | { tipo: "prenatal_existente"; unidade: string; mensagem: string }
-  | { tipo: "unidades_proximas"; distritoNome?: string; unidades: { nome: string; cnes?: string; distanciaKm: string }[] };
+  | {
+      tipo: "unidades_proximas";
+      distritoNome?: string;
+      unidades: { nome: string; cnes?: string; distanciaKm: string }[];
+    };
 
 export function useCadastroGestante() {
   const router = useRouter();
@@ -150,31 +201,37 @@ export function useCadastroGestante() {
   const [pacienteLocalizado, setPacienteLocalizado] = useState(false);
   const lastAutoCepLookupRef = useRef<string>("");
 
-  const updateField = useCallback(<K extends keyof FormCadastroGestante>(key: K, value: FormCadastroGestante[K]) => {
-    setForm((prev) => {
-      const next = { ...prev, [key]: value };
-      if (key === "nomeMaeIgnorada") {
-        next.nomeMae = value ? "IGNORADA" : "";
-      }
-      if (key === "nomePaiIgnorado") {
-        next.nomePai = value ? "IGNORADO" : "";
-      }
-      if (key === "distritoId") {
-        next.ubsId = "";
-      }
-      if (key === "numeroSemNumero" && value) {
-        next.numero = "";
-      }
-      if (key === "possuiDeficiencia" && !value) {
-        next.deficienciaTipos = [];
-        next.deficiencia = "";
-      }
-      return next;
-    });
-    if (key === "cep") setErroCep("");
-    if (key === "dum") setErroDum("");
-    if (key === "senha" || key === "senhaConfirma") setErroSenha("");
-  }, []);
+  const updateField = useCallback(
+    <K extends keyof FormCadastroGestante>(
+      key: K,
+      value: FormCadastroGestante[K],
+    ) => {
+      setForm((prev) => {
+        const next = { ...prev, [key]: value };
+        if (key === "nomeMaeIgnorada") {
+          next.nomeMae = value ? "IGNORADA" : "";
+        }
+        if (key === "nomePaiIgnorado") {
+          next.nomePai = value ? "IGNORADO" : "";
+        }
+        if (key === "distritoId") {
+          next.ubsId = "";
+        }
+        if (key === "numeroSemNumero" && value) {
+          next.numero = "";
+        }
+        if (key === "possuiDeficiencia" && !value) {
+          next.deficienciaTipos = [];
+          next.deficiencia = "";
+        }
+        return next;
+      });
+      if (key === "cep") setErroCep("");
+      if (key === "dum") setErroDum("");
+      if (key === "senha" || key === "senhaConfirma") setErroSenha("");
+    },
+    [],
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -184,12 +241,28 @@ export function useCadastroGestante() {
       const raw = sessionStorage.getItem(CNS_PACIENTE_KEY);
       if (!raw) return;
       try {
-        const paciente = JSON.parse(raw) as Parameters<typeof mapPacienteBaseFederalToDadosCadastro>[0];
+        const parsed = JSON.parse(raw) as unknown;
         sessionStorage.removeItem(CNS_PACIENTE_KEY);
-        const dados = mapPacienteBaseFederalToDadosCadastro(paciente) as DadosPrefillFromFederal;
+        const dados = (() => {
+          if (isCitizenPrefillLike(parsed)) {
+            // Payload novo: CitizenDto retornado pela API (e-SUS).
+            return parsed as DadosPrefillFromFederal;
+          }
+          // Payload antigo: PacienteBaseFederal (contrato legado da base federal).
+          const paciente = parsed as Parameters<
+            typeof mapPacienteBaseFederalToDadosCadastro
+          >[0];
+          return mapPacienteBaseFederalToDadosCadastro(
+            paciente,
+          ) as DadosPrefillFromFederal;
+        })();
         const telFederal = dados.telefoneCelular;
-        const dddFederal = telFederal && String(telFederal).replace(/\D/g, "").length >= 2 ? String(telFederal).replace(/\D/g, "").slice(0, 2) : "";
-        const celularFederal = telFederal && String(telFederal).replace(/\D/g, "").length > 2 ? String(telFederal).replace(/\D/g, "").slice(2, 11) : "";
+        const telDigits = telFederal
+          ? String(telFederal).replace(/\D/g, "")
+          : "";
+        const dddFederal = telDigits.length >= 2 ? telDigits.slice(0, 2) : "";
+        const celularFederal =
+          telDigits.length > 2 ? telDigits.slice(2, 11) : "";
         const racaCorVal = normalizeRacaCorForSelect(dados.racaCor);
         const sexoVal = normalizeSexoForSelect(dados.sexo);
         setPacienteLocalizado(true);
@@ -210,12 +283,22 @@ export function useCadastroGestante() {
           celularPrincipal: celularFederal || prev.celularPrincipal,
           email: dados.email ?? prev.email,
           logradouro: dados.logradouro ?? prev.logradouro,
-          numero: dados.numero && (dados.numero?.toUpperCase() === "S/N" || dados.numero === "s/n") ? "" : (dados.numero ?? prev.numero),
-          numeroSemNumero: !!(dados.numero && (dados.numero?.toUpperCase() === "S/N" || dados.numero === "s/n")),
+          numero:
+            dados.numero &&
+            (dados.numero?.toUpperCase() === "S/N" || dados.numero === "s/n")
+              ? ""
+              : (dados.numero ?? prev.numero),
+          numeroSemNumero: !!(
+            dados.numero &&
+            (dados.numero?.toUpperCase() === "S/N" || dados.numero === "s/n")
+          ),
           complemento: dados.complemento ?? prev.complemento,
           bairro: dados.bairro ?? prev.bairro,
           cep: dados.cep ? formatCepValue(dados.cep) : prev.cep,
-          municipio: dados.municipio ?? prev.municipio,
+          municipio:
+            dados.municipio != null && String(dados.municipio).trim() !== ""
+              ? String(dados.municipio).trim()
+              : prev.municipio,
         }));
       } catch {
         sessionStorage.removeItem(CNS_PACIENTE_KEY);
@@ -226,7 +309,11 @@ export function useCadastroGestante() {
       const raw = sessionStorage.getItem(DADOS_PACIENTE_BUSCA_ALT_KEY);
       if (!raw) return;
       try {
-        const dados = JSON.parse(raw) as { nomeCompleto?: string; nomeMae?: string; dataNascimento?: string };
+        const dados = JSON.parse(raw) as {
+          nomeCompleto?: string;
+          nomeMae?: string;
+          dataNascimento?: string;
+        };
         sessionStorage.removeItem(DADOS_PACIENTE_BUSCA_ALT_KEY);
         setForm((prev) => ({
           ...prev,
@@ -252,7 +339,7 @@ export function useCadastroGestante() {
   }, [router]);
 
   const handleVoltar = useCallback(() => {
-    setEtapa((e) => (e > 1 ? (e - 1) as 1 | 2 | 3 | 4 : e));
+    setEtapa((e) => (e > 1 ? ((e - 1) as 1 | 2 | 3 | 4) : e));
   }, []);
 
   const handleContinuar = useCallback(() => {
@@ -263,49 +350,76 @@ export function useCadastroGestante() {
     if (etapa < 4) setEtapa((e) => (e + 1) as 1 | 2 | 3 | 4);
   }, [etapa, canSubmitStep1, canSubmitStep2, canSubmitStep3]);
 
-  const pesquisarCep = useCallback(async (opts?: { force?: boolean }) => {
-    const force = opts?.force ?? true;
-    const digits = form.cep.replace(/\D/g, "").trim();
-    setErroCep("");
-    if (digits.length !== 8) {
-      setErroCep("CEP inválido.");
-      return;
-    }
-    setCepBuscando(true);
-    try {
-      const res = await fetch(`/api/cep/buscar?cep=${digits}`);
-      const data = (await res.json()) as { ok?: boolean; erro?: string; tipoLogradouro?: string; logradouro?: string; bairro?: string; localidade?: string; uf?: string };
-      if (!res.ok || !data.ok) {
-        setErroCep(data.erro ?? "CEP não localizado. Entre em contato com a unidade de saúde.");
-        setCepBuscando(false);
+  const pesquisarCep = useCallback(
+    async (opts?: { force?: boolean }) => {
+      const force = opts?.force ?? true;
+      const digits = form.cep.replace(/\D/g, "").trim();
+      setErroCep("");
+      if (digits.length !== 8) {
+        setErroCep("CEP inválido.");
         return;
       }
-      const tipoLogradouro = (data.tipoLogradouro ?? "").trim();
-      const logradouro = (data.logradouro ?? "").trim();
-      const bairro = (data.bairro ?? "").trim();
-      const localidade = (data.localidade ?? "").trim();
-      setForm((prev) => ({
-        ...prev,
-        tipoLogradouro: force ? tipoLogradouro : (prev.tipoLogradouro || tipoLogradouro),
-        logradouro: force ? logradouro : (prev.logradouro || logradouro),
-        bairro: force ? bairro : (prev.bairro || bairro),
-        municipio: force ? localidade : (prev.municipio || localidade),
-      }));
-    } catch {
-      setErroCep("CEP não localizado. Entre em contato com a unidade de saúde.");
-    }
-    setCepBuscando(false);
-  }, [form.cep]);
+      setCepBuscando(true);
+      try {
+        const res = await fetch(`/api/cep/buscar?cep=${digits}`);
+        const data = (await res.json()) as {
+          ok?: boolean;
+          erro?: string;
+          tipoLogradouro?: string;
+          logradouro?: string;
+          bairro?: string;
+          localidade?: string;
+          uf?: string;
+        };
+        if (!res.ok || !data.ok) {
+          setErroCep(
+            data.erro ??
+              "CEP não localizado. Entre em contato com a unidade de saúde.",
+          );
+          setCepBuscando(false);
+          return;
+        }
+        const tipoLogradouro = (data.tipoLogradouro ?? "").trim();
+        const logradouro = (data.logradouro ?? "").trim();
+        const bairro = (data.bairro ?? "").trim();
+        const localidade = (data.localidade ?? "").trim();
+        setForm((prev) => ({
+          ...prev,
+          tipoLogradouro: force
+            ? tipoLogradouro
+            : prev.tipoLogradouro || tipoLogradouro,
+          logradouro: force ? logradouro : prev.logradouro || logradouro,
+          bairro: force ? bairro : prev.bairro || bairro,
+          municipio: force ? localidade : prev.municipio || localidade,
+        }));
+      } catch {
+        setErroCep(
+          "CEP não localizado. Entre em contato com a unidade de saúde.",
+        );
+      }
+      setCepBuscando(false);
+    },
+    [form.cep],
+  );
 
   useEffect(() => {
     if (!pacienteLocalizado) return;
     const digits = form.cep.replace(/\D/g, "").trim();
     if (digits.length !== 8) return;
     if (lastAutoCepLookupRef.current === digits) return;
-    if (form.tipoLogradouro || form.logradouro || form.bairro || form.municipio) return;
+    if (form.tipoLogradouro || form.logradouro || form.bairro || form.municipio)
+      return;
     lastAutoCepLookupRef.current = digits;
     void pesquisarCep({ force: false });
-  }, [pacienteLocalizado, form.cep, form.tipoLogradouro, form.logradouro, form.bairro, form.municipio, pesquisarCep]);
+  }, [
+    pacienteLocalizado,
+    form.cep,
+    form.tipoLogradouro,
+    form.logradouro,
+    form.bairro,
+    form.municipio,
+    pesquisarCep,
+  ]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -319,14 +433,19 @@ export function useCadastroGestante() {
         setErroDum(dumErr);
         return;
       }
-      if (form.programaSocial === "bolsa-familia" && form.nis.replace(/\D/g, "").length !== 11) {
+      if (
+        form.programaSocial === "bolsa-familia" &&
+        form.nis.replace(/\D/g, "").length !== 11
+      ) {
         setErroEnvio("NIS é obrigatório para Bolsa Família (11 dígitos).");
         return;
       }
       const senhaTrim = form.senha.trim();
       const confirmaTrim = form.senhaConfirma.trim();
       if (senhaTrim.length < 6 || senhaTrim.length > 15) {
-        setErroSenha("A senha deve ter o mínimo de 6 e máximo de 15 caracteres");
+        setErroSenha(
+          "A senha deve ter o mínimo de 6 e máximo de 15 caracteres",
+        );
         return;
       }
       if (senhaTrim !== confirmaTrim) {
@@ -338,28 +457,39 @@ export function useCadastroGestante() {
       const cnsDig = form.cns.replace(/\D/g, "").slice(0, 15);
       const cepDigits = form.cep.replace(/\D/g, "").slice(0, 8);
       const deficienciaVal =
-        form.possuiDeficiencia && (form.deficienciaTipos.length > 0 || form.deficiencia.trim())
-          ? [...form.deficienciaTipos, form.deficiencia.trim()].filter(Boolean).join("; ")
+        form.possuiDeficiencia &&
+        (form.deficienciaTipos.length > 0 || form.deficiencia.trim())
+          ? [...form.deficienciaTipos, form.deficiencia.trim()]
+              .filter(Boolean)
+              .join("; ")
           : undefined;
       const dddP = form.ddd.replace(/\D/g, "").slice(0, 2);
       const celP = form.celularPrincipal.replace(/\D/g, "").slice(0, 9);
-      const telefoneCompleto = dddP.length === 2 && celP.length === 9 ? dddP + celP : "";
+      const telefoneCompleto =
+        dddP.length === 2 && celP.length === 9 ? dddP + celP : "";
       const payload = {
         cpf: cpfDig.length === 11 ? cpfDig : "",
         cns: cnsDig.length === 15 ? cnsDig : undefined,
         nomeCompleto: form.nomeCompleto.trim().slice(0, 70),
-        nomeMae: form.nomeMaeIgnorada ? "IGNORADA" : form.nomeMae.trim() || undefined,
-        nomePai: form.nomePaiIgnorado ? "IGNORADO" : form.nomePai.trim() || undefined,
+        nomeMae: form.nomeMaeIgnorada
+          ? "IGNORADA"
+          : form.nomeMae.trim() || undefined,
+        nomePai: form.nomePaiIgnorado
+          ? "IGNORADO"
+          : form.nomePai.trim() || undefined,
         dataNascimento: form.dataNascimento.trim() || undefined,
         municipioNascimento: form.municipioNascimento.trim() || undefined,
         telefone: telefoneCompleto,
-        telefoneAlternativo: form.telefoneAlternativo.replace(/\D/g, "").slice(0, 11) || undefined,
+        telefoneAlternativo:
+          form.telefoneAlternativo.replace(/\D/g, "").slice(0, 11) || undefined,
         temWhatsappAlternativo: form.temWhatsappAlternativo,
         telefoneResidencial: (() => {
           const dddR = form.dddResidencial.replace(/\D/g, "").slice(0, 2);
           const numR = form.telefoneResidencial.replace(/\D/g, "").slice(0, 8);
           if (dddR.length === 2 && numR.length === 8) return dddR + numR;
-          return numR ? form.telefoneResidencial.replace(/\D/g, "").slice(0, 8) : undefined;
+          return numR
+            ? form.telefoneResidencial.replace(/\D/g, "").slice(0, 8)
+            : undefined;
         })(),
         email: form.email.trim() || undefined,
         temWhatsapp: form.temWhatsapp,
@@ -414,7 +544,9 @@ export function useCadastroGestante() {
         setMostrarConfirmacao(true);
         if (id) {
           try {
-            const confRes = await fetch(`/api/gestante/confirmacao?cadastroId=${encodeURIComponent(id)}`);
+            const confRes = await fetch(
+              `/api/gestante/confirmacao?cadastroId=${encodeURIComponent(id)}`,
+            );
             const confData = await confRes.json().catch(() => ({}));
             if (confData.ok && confData.tipo) {
               if (confData.tipo === "prenatal_existente") {
@@ -427,7 +559,9 @@ export function useCadastroGestante() {
                 setConfirmacaoData({
                   tipo: "unidades_proximas",
                   distritoNome: confData.distritoNome,
-                  unidades: Array.isArray(confData.unidades) ? confData.unidades : [],
+                  unidades: Array.isArray(confData.unidades)
+                    ? confData.unidades
+                    : [],
                 });
               }
             }
@@ -442,21 +576,28 @@ export function useCadastroGestante() {
       }
       setEnviando(false);
     },
-    [etapa, canSubmitStep4, enviando, form, searchParams]
+    [etapa, canSubmitStep4, enviando, form, searchParams],
   );
 
-  const fecharConfirmacao = useCallback((acessar: boolean) => {
-    setMostrarConfirmacao(false);
-    if (acessar) {
-      try {
-        const g = { nomeCompleto: form.nomeCompleto.trim(), nomeSocial: form.nomeSocial.trim() || null, nomeSocialPrincipal: form.nomeSocialPrincipal };
-        sessionStorage.setItem("gestante", JSON.stringify(g));
-      } catch {}
-      window.location.href = "/gestante";
-    } else {
-      window.location.href = "/gestante/login";
-    }
-  }, [form.nomeCompleto, form.nomeSocial, form.nomeSocialPrincipal]);
+  const fecharConfirmacao = useCallback(
+    (acessar: boolean) => {
+      setMostrarConfirmacao(false);
+      if (acessar) {
+        try {
+          const g = {
+            nomeCompleto: form.nomeCompleto.trim(),
+            nomeSocial: form.nomeSocial.trim() || null,
+            nomeSocialPrincipal: form.nomeSocialPrincipal,
+          };
+          sessionStorage.setItem("gestante", JSON.stringify(g));
+        } catch {}
+        window.location.href = "/gestante";
+      } else {
+        window.location.href = "/gestante/login";
+      }
+    },
+    [form.nomeCompleto, form.nomeSocial, form.nomeSocialPrincipal],
+  );
 
   return {
     etapa,
@@ -473,7 +614,11 @@ export function useCadastroGestante() {
       setErroDum,
     },
     errosStep1,
-    loading: { enviando, cepBuscando, confirmacaoCarregando: confirmacaoCarregando },
+    loading: {
+      enviando,
+      cepBuscando,
+      confirmacaoCarregando: confirmacaoCarregando,
+    },
     canSubmitStep1,
     canSubmitStep2,
     canSubmitStep3,
