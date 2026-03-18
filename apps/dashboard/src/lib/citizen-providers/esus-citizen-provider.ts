@@ -79,15 +79,17 @@ export const esusCitizenProvider: ICitizenProvider = {
           c.dt_nascimento AS datanascimento,
           c.no_sexo AS sexo,
           c.nu_telefone_celular AS telefonecelular,
+          c.nu_telefone_residencial AS telefoneresidencial,
           c.ds_email AS email,
           c.ds_logradouro AS logradouro,
           c.nu_numero AS numero,
           c.no_bairro AS bairro,
           c.ds_cep AS cep,
           c.ds_complemento AS complemento,
-          c.co_localidade_endereco AS municipio
+          loc.no_localidade AS municipio
         FROM tb_cidadao c
         LEFT JOIN tb_raca_cor r ON c.co_raca_cor = r.co_raca_cor
+        LEFT JOIN tb_localidade loc ON c.co_localidade_endereco::bigint = loc.co_localidade
         WHERE c.st_ativo = 1
           AND (
             (length($1) = 11 AND replace(replace(replace(coalesce(c.nu_cpf, ''), '.', ''), '-', ''), ' ', '') = $1)
@@ -115,6 +117,7 @@ export const esusCitizenProvider: ICitizenProvider = {
         dataNascimento: toISODate(get("datanascimento")) ?? undefined,
         sexo: trim(get("sexo")) ?? undefined,
         telefoneCelular: trim(get("telefonecelular")) ?? undefined,
+        telefoneResidencial: trim(get("telefoneresidencial")) ?? undefined,
         email: trim(get("email")) ?? undefined,
         logradouro: trim(get("logradouro")) ?? undefined,
         numero: trim(get("numero")) ?? undefined,

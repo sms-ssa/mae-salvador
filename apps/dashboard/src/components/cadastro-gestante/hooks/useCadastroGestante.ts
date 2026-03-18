@@ -38,6 +38,7 @@ interface DadosPrefillFromFederal {
   municipio?: string;
   email?: string;
   telefoneCelular?: string;
+  telefoneResidencial?: string;
 }
 
 type CitizenPrefillLike = {
@@ -71,6 +72,24 @@ const RACA_COR_SELECT_VALUES = [
 ];
 const SEXO_SELECT_VALUES = ["FEMININO", "MASCULINO", "INDETERMINADO"];
 
+const IDENTIDADE_GENERO_SELECT_VALUES = [
+  "mulher-cis",
+  "homem-cis",
+  "mulher-trans",
+  "homem-trans",
+  "travesti",
+  "pessoa-nao-binaria",
+] as const;
+
+const ORIENTACAO_SEXUAL_SELECT_VALUES = [
+  "heterossexual",
+  "gay",
+  "lesbica",
+  "bissexual",
+  "pansexual",
+  "assexual",
+] as const;
+
 function normalizeRacaCorForSelect(value: unknown): string {
   const s =
     typeof value === "string" ? value : value != null ? String(value) : "";
@@ -89,6 +108,76 @@ function normalizeSexoForSelect(value: unknown): string {
   if (!s.trim()) return "";
   const v = s.trim().toUpperCase();
   return SEXO_SELECT_VALUES.includes(v) ? v : "";
+}
+
+function normalizeIdentidadeGeneroForSelect(value: unknown): string {
+  const s =
+    typeof value === "string" ? value : value != null ? String(value) : "";
+  if (!s.trim()) return "";
+  const v = s.trim().toUpperCase();
+  // e-SUS costuma vir como enum: MULHER_CIS, HOMEM_CIS, etc.
+  const mapped =
+    v === "MULHER_CIS"
+      ? "mulher-cis"
+      : v === "HOMEM_CIS"
+        ? "homem-cis"
+        : v === "MULHER_TRANS"
+          ? "mulher-trans"
+          : v === "HOMEM_TRANS"
+            ? "homem-trans"
+            : v === "TRAVESTI"
+              ? "travesti"
+              : v === "PESSOA_NAO_BINARIA" || v === "NAO_BINARIA" || v === "NAO_BINÁRIO"
+                ? "pessoa-nao-binaria"
+                : s.trim();
+  return IDENTIDADE_GENERO_SELECT_VALUES.includes(
+    mapped as (typeof IDENTIDADE_GENERO_SELECT_VALUES)[number],
+  )
+    ? mapped
+    : "";
+}
+
+function normalizeOrientacaoSexualForSelect(value: unknown): string {
+  const s =
+    typeof value === "string" ? value : value != null ? String(value) : "";
+  if (!s.trim()) return "";
+  const v = s.trim().toUpperCase();
+  // e-SUS costuma vir como enum: HETEROSSEXUAL, etc.
+  const mapped =
+    v === "HETEROSSEXUAL"
+      ? "heterossexual"
+      : v === "GAY"
+        ? "gay"
+        : v === "LESBICA" || v === "LÉSBICA"
+          ? "lesbica"
+          : v === "BISSEXUAL"
+            ? "bissexual"
+            : v === "PANSEXUAL"
+              ? "pansexual"
+              : v === "ASSEXUAL"
+                ? "assexual"
+                : s.trim();
+  return ORIENTACAO_SEXUAL_SELECT_VALUES.includes(
+    mapped as (typeof ORIENTACAO_SEXUAL_SELECT_VALUES)[number],
+  )
+    ? mapped
+    : "";
+}
+
+function normalizeTipoLogradouroForSelect(value: unknown): string {
+  const s =
+    typeof value === "string" ? value : value != null ? String(value) : "";
+  if (!s.trim()) return "";
+  const v = s
+    .trim()
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (v === "RUA") return "Rua";
+  if (v === "AV" || v === "AVENIDA") return "Avenida";
+  if (v === "PRACA" || v === "PCA") return "Praça";
+  if (v === "TRAVESSA" || v === "TV") return "Travessa";
+  return "Outro";
 }
 
 function formatCpfValue(value: string): string {
@@ -130,17 +219,17 @@ const INITIAL_FORM: FormCadastroGestante = {
   nomePai: "",
   nomePaiIgnorado: false,
   dataNascimento: "",
-  municipioNascimento: "",
   racaCor: "",
   sexo: "",
-  possuiDeficiencia: false,
+  possuiDeficiencia: null,
   deficienciaTipos: [],
   deficiencia: "",
   identidadeGenero: "",
   orientacaoSexual: "",
   ddd: "",
   celularPrincipal: "",
-  telefoneAlternativo: "",
+  dddAlternativo: "",
+  celularAlternativo: "",
   temWhatsappAlternativo: false,
   dddResidencial: "",
   telefoneResidencial: "",
@@ -158,7 +247,7 @@ const INITIAL_FORM: FormCadastroGestante = {
   distritoId: "",
   ubsId: "",
   descobrimento: "",
-  programaSocial: "",
+  programaSocial: [],
   nis: "",
   planoSaude: "",
   manterAcompanhamentoUbs: "",
@@ -220,7 +309,7 @@ export function useCadastroGestante() {
         if (key === "numeroSemNumero" && value) {
           next.numero = "";
         }
-        if (key === "possuiDeficiencia" && !value) {
+        if (key === "possuiDeficiencia" && value !== true) {
           next.deficienciaTipos = [];
           next.deficiencia = "";
         }
@@ -263,8 +352,22 @@ export function useCadastroGestante() {
         const dddFederal = telDigits.length >= 2 ? telDigits.slice(0, 2) : "";
         const celularFederal =
           telDigits.length > 2 ? telDigits.slice(2, 11) : "";
+        const telResFederal = dados.telefoneResidencial;
+        const telResDigits = telResFederal
+          ? String(telResFederal).replace(/\D/g, "")
+          : "";
+        const dddResFederal =
+          telResDigits.length >= 2 ? telResDigits.slice(0, 2) : "";
+        const residencialFederal =
+          telResDigits.length > 2 ? telResDigits.slice(2, 10) : "";
         const racaCorVal = normalizeRacaCorForSelect(dados.racaCor);
         const sexoVal = normalizeSexoForSelect(dados.sexo);
+        const identidadeGeneroVal = normalizeIdentidadeGeneroForSelect(
+          dados.identidadeGenero,
+        );
+        const orientacaoSexualVal = normalizeOrientacaoSexualForSelect(
+          dados.orientacaoSexual,
+        );
         setPacienteLocalizado(true);
         setForm((prev) => ({
           ...prev,
@@ -277,10 +380,12 @@ export function useCadastroGestante() {
           dataNascimento: dados.dataNascimento ?? prev.dataNascimento,
           sexo: sexoVal || prev.sexo,
           racaCor: racaCorVal || prev.racaCor,
-          identidadeGenero: dados.identidadeGenero ?? prev.identidadeGenero,
-          orientacaoSexual: dados.orientacaoSexual ?? prev.orientacaoSexual,
+          identidadeGenero: identidadeGeneroVal || prev.identidadeGenero,
+          orientacaoSexual: orientacaoSexualVal || prev.orientacaoSexual,
           ddd: dddFederal || prev.ddd,
           celularPrincipal: celularFederal || prev.celularPrincipal,
+          dddResidencial: dddResFederal || prev.dddResidencial,
+          telefoneResidencial: residencialFederal || prev.telefoneResidencial,
           email: dados.email ?? prev.email,
           logradouro: dados.logradouro ?? prev.logradouro,
           numero:
@@ -380,14 +485,15 @@ export function useCadastroGestante() {
           return;
         }
         const tipoLogradouro = (data.tipoLogradouro ?? "").trim();
+      const tipoLogradouroNorm = normalizeTipoLogradouroForSelect(tipoLogradouro);
         const logradouro = (data.logradouro ?? "").trim();
         const bairro = (data.bairro ?? "").trim();
         const localidade = (data.localidade ?? "").trim();
         setForm((prev) => ({
           ...prev,
           tipoLogradouro: force
-            ? tipoLogradouro
-            : prev.tipoLogradouro || tipoLogradouro,
+          ? tipoLogradouroNorm
+          : prev.tipoLogradouro || tipoLogradouroNorm,
           logradouro: force ? logradouro : prev.logradouro || logradouro,
           bairro: force ? bairro : prev.bairro || bairro,
           municipio: force ? localidade : prev.municipio || localidade,
@@ -407,8 +513,9 @@ export function useCadastroGestante() {
     const digits = form.cep.replace(/\D/g, "").trim();
     if (digits.length !== 8) return;
     if (lastAutoCepLookupRef.current === digits) return;
-    if (form.tipoLogradouro || form.logradouro || form.bairro || form.municipio)
-      return;
+    // Mesmo que logradouro/bairro venham do e-SUS, queremos completar ao menos
+    // tipoLogradouro e município a partir do CEP (sem sobrescrever o que já existe).
+    if (form.tipoLogradouro && form.municipio) return;
     lastAutoCepLookupRef.current = digits;
     void pesquisarCep({ force: false });
   }, [
@@ -434,7 +541,7 @@ export function useCadastroGestante() {
         return;
       }
       if (
-        form.programaSocial === "bolsa-familia" &&
+        form.programaSocial.includes("bolsa-familia") &&
         form.nis.replace(/\D/g, "").length !== 11
       ) {
         setErroEnvio("NIS é obrigatório para Bolsa Família (11 dígitos).");
@@ -478,10 +585,13 @@ export function useCadastroGestante() {
           ? "IGNORADO"
           : form.nomePai.trim() || undefined,
         dataNascimento: form.dataNascimento.trim() || undefined,
-        municipioNascimento: form.municipioNascimento.trim() || undefined,
         telefone: telefoneCompleto,
-        telefoneAlternativo:
-          form.telefoneAlternativo.replace(/\D/g, "").slice(0, 11) || undefined,
+        telefoneAlternativo: (() => {
+          const dddA = form.dddAlternativo.replace(/\D/g, "").slice(0, 2);
+          const celA = form.celularAlternativo.replace(/\D/g, "").slice(0, 9);
+          if (dddA.length === 2 && celA.length === 9) return dddA + celA;
+          return undefined;
+        })(),
         temWhatsappAlternativo: form.temWhatsappAlternativo,
         telefoneResidencial: (() => {
           const dddR = form.dddResidencial.replace(/\D/g, "").slice(0, 2);
@@ -497,7 +607,7 @@ export function useCadastroGestante() {
         nomeSocialPrincipal: form.nomeSocialPrincipal,
         racaCor: form.racaCor.trim() || undefined,
         sexo: form.sexo.trim() || undefined,
-        possuiDeficiencia: form.possuiDeficiencia,
+        possuiDeficiencia: form.possuiDeficiencia === true,
         deficiencia: deficienciaVal,
         identidadeGenero: form.identidadeGenero.trim() || undefined,
         orientacaoSexual: form.orientacaoSexual.trim() || undefined,
@@ -510,7 +620,7 @@ export function useCadastroGestante() {
         municipio: form.municipio.trim() || undefined,
         pontoReferencia: form.pontoReferencia.trim() || undefined,
         descobrimento: form.descobrimento || undefined,
-        programaSocial: form.programaSocial || "nenhum",
+        programaSocial: form.programaSocial.length ? form.programaSocial : ["nenhum"],
         nis: form.nis.trim() || undefined,
         planoSaude: form.planoSaude || undefined,
         manterAcompanhamentoUbs: form.manterAcompanhamentoUbs || undefined,

@@ -65,23 +65,64 @@ export function StepGestacaoPerfil({ form, updateField, erroDum }: StepGestacaoP
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Programa social <span className="text-red-500">*</span></Label>
-              <Select
-                value={form.programaSocial}
-                onValueChange={(v) => updateField("programaSocial", v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="nenhum">Nenhum</SelectItem>
-                  <SelectItem value="bolsa-familia">Bolsa Família</SelectItem>
-                  <SelectItem value="bpc-loas">BPC/LOAS</SelectItem>
-                  <SelectItem value="aluguel-social">Aluguel Social</SelectItem>
-                  <SelectItem value="outros">Outros</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex flex-wrap gap-2">
+                {(
+                  [
+                    { value: "nenhum", label: "Nenhum", hint: "exclusivo" },
+                    { value: "bolsa-familia", label: "Bolsa Família" },
+                    { value: "bpc-loas", label: "BPC/LOAS" },
+                    { value: "aluguel-social", label: "Aluguel Social" },
+                    { value: "outros", label: "Outros" },
+                  ] as const
+                ).map((op) => {
+                  const id = `programa-social-${op.value}`;
+                  const selected = form.programaSocial.includes(op.value);
+                  return (
+                    <div key={op.value} className="flex items-center">
+                      <input
+                        id={id}
+                        type="checkbox"
+                        checked={selected}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          const current = form.programaSocial;
+                          if (op.value === "nenhum") {
+                            updateField("programaSocial", checked ? ["nenhum"] : []);
+                            return;
+                          }
+                          const withoutNenhum = current.filter((v) => v !== "nenhum");
+                          if (checked) {
+                            updateField(
+                              "programaSocial",
+                              Array.from(new Set([...withoutNenhum, op.value])),
+                            );
+                          } else {
+                            updateField(
+                              "programaSocial",
+                              withoutNenhum.filter((v) => v !== op.value),
+                            );
+                          }
+                        }}
+                        className="peer sr-only"
+                      />
+                      <Label
+                        htmlFor={id}
+                        className="cursor-pointer select-none rounded-md border px-3 py-2 text-sm font-medium transition-colors
+                          bg-background hover:bg-muted/40
+                          peer-checked:border-primary/50 peer-checked:bg-primary/10"
+                        title={op.hint ? `Opção ${op.hint}` : undefined}
+                      >
+                        {op.label}
+                      </Label>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                Dica: “Nenhum” é exclusivo.
+              </p>
             </div>
-            {form.programaSocial === "bolsa-familia" && (
+            {form.programaSocial.includes("bolsa-familia") && (
               <div className="space-y-2">
                 <Label htmlFor="nis">NIS <span className="text-red-500">*</span></Label>
                 <Input
@@ -91,7 +132,7 @@ export function StepGestacaoPerfil({ form, updateField, erroDum }: StepGestacaoP
                   onChange={(e) => updateField("nis", e.target.value.replace(/\D/g, "").slice(0, 11))}
                   maxLength={11}
                   inputMode="numeric"
-                  className={form.programaSocial === "bolsa-familia" && form.nis.replace(/\D/g, "").length > 0 && form.nis.replace(/\D/g, "").length !== 11 ? "border-destructive" : ""}
+                  className={form.programaSocial.includes("bolsa-familia") && form.nis.replace(/\D/g, "").length > 0 && form.nis.replace(/\D/g, "").length !== 11 ? "border-destructive" : ""}
                 />
                 <p className="text-[10px] text-muted-foreground">Obrigatório para Bolsa Família (11 dígitos).</p>
               </div>
@@ -225,7 +266,7 @@ export function StepGestacaoPerfil({ form, updateField, erroDum }: StepGestacaoP
                 <input
                   type="radio"
                   name="alergias"
-                  checked={form.alergias !== "sim" && (form.alergias === "nao" || !form.alergias)}
+                  checked={form.alergias === "nao"}
                   onChange={() => updateField("alergias", "nao")}
                   className="rounded-full"
                 />
@@ -250,7 +291,7 @@ export function StepGestacaoPerfil({ form, updateField, erroDum }: StepGestacaoP
                 <input
                   type="radio"
                   name="doencas"
-                  checked={form.doencasConhecidas !== "sim" && (form.doencasConhecidas === "nao" || !form.doencasConhecidas)}
+                  checked={form.doencasConhecidas === "nao"}
                   onChange={() => updateField("doencasConhecidas", "nao")}
                   className="rounded-full"
                 />
@@ -275,7 +316,7 @@ export function StepGestacaoPerfil({ form, updateField, erroDum }: StepGestacaoP
                 <input
                   type="radio"
                   name="medicacoes"
-                  checked={form.medicacoesEmUso !== "sim" && (form.medicacoesEmUso === "nao" || !form.medicacoesEmUso)}
+                  checked={form.medicacoesEmUso === "nao"}
                   onChange={() => updateField("medicacoesEmUso", "nao")}
                   className="rounded-full"
                 />

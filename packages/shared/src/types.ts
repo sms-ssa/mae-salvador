@@ -51,17 +51,24 @@ export interface PacienteBaseFederal {
   cpf?: string | null;
   cns?: string | null;
   nome?: string | null;
+  nomeSocial?: string | null;
   nomeMae?: string | null;
   nomePai?: string | null;
   dataNascimento?: string | null;
   sexo?: string | null;
+  racaCor?: string | null;
+  identidadeGenero?: string | null;
+  orientacaoSexual?: string | null;
   logradouro?: string | null;
   numero?: string | null;
   complemento?: string | null;
   bairro?: string | null;
   cep?: string | null;
+  municipio?: string | null;
   emails?: string | null;
   ddd?: string | null;
+  telefoneCelular?: string | null;
+  telefoneResidencial?: string | null;
 }
 
 /**
@@ -118,15 +125,22 @@ export interface DadosPessoaisFromFederal {
   cpf: string;
   cns?: string;
   nomeCompleto: string;
+  nomeSocial?: string;
   nomeMae?: string;
   nomePai?: string;
   dataNascimento?: string;
   sexo?: Sexo;
+  racaCor?: string;
+  identidadeGenero?: string;
+  orientacaoSexual?: string;
   logradouro: string;
   numero: string;
   complemento?: string;
   bairro: string;
   cep: string;
+  municipio?: string;
+  email?: string;
+  telefoneCelular?: string;
 }
 
 /**

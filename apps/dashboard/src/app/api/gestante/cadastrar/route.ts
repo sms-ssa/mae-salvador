@@ -53,7 +53,8 @@ export async function POST(request: NextRequest) {
   const nomeMae = String(body.nomeMae ?? "").trim() || null;
   const nomePai = String(body.nomePai ?? "").trim() || null;
   const dataNascimento = toDate(String(body.dataNascimento ?? ""));
-  const municipioNascimento = String(body.municipioNascimento ?? "").trim() || null;
+  // Campo legado (pergunta de segurança) removido do formulário.
+  const municipioNascimento = null;
   const telefone = onlyDigits(String(body.telefone ?? ""), 11);
   const telefoneAlternativo = String(body.telefoneAlternativo ?? "").trim() || null;
   const telefoneResidencial = String(body.telefoneResidencial ?? "").trim() || null;
@@ -78,7 +79,9 @@ export async function POST(request: NextRequest) {
   const pontoReferencia = String(body.pontoReferencia ?? "").trim() || null;
   const distritoSanitarioId = String(body.distritoId ?? "").trim() || null;
   const descobrimentoGestacao = String(body.descobrimento ?? "").trim();
-  const programaSocial = String(body.programaSocial ?? "").trim() || "nenhum";
+  const programaSocial = Array.isArray(body.programaSocial)
+    ? (body.programaSocial.map((x) => String(x).trim()).filter(Boolean).join("; ") || "nenhum")
+    : (String(body.programaSocial ?? "").trim() || "nenhum");
   const nis = String(body.nis ?? "").trim() || null;
   const planoSaude = (String(body.planoSaude ?? "").trim() || null) as "sim" | "nao" | null;
   const manterAcompanhamentoUbs = (String(body.manterAcompanhamentoUbs ?? "").trim() || null) as "sim" | "nao" | null;

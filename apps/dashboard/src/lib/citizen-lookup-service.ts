@@ -26,7 +26,6 @@ export async function getCitizenByCpfOrCns(
   let citizen: CitizenDto | null = null;
   try {
     citizen = await esusCitizenProvider.getCitizenByCpfOrCns(document);
-    console.log("citizen esus", citizen);
     if (citizen != null) {
       return citizen;
     }

@@ -11,20 +11,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { FormCadastroGestante } from "../validators/validacoesCadastroGestante";
-import { formatCpf, caracteresNomeValidos } from "../validators/validacoesCadastroGestante";
-
-/** Lista de municípios (BA) para Município de Nascimento - lista suspensa conforme doc. */
-const MUNICIPIOS_NASCIMENTO = [
-  "Salvador", "Feira de Santana", "Vitória da Conquista", "Camaçari", "Lauro de Freitas",
-  "Ilhéus", "Itabuna", "Juazeiro", "Alagoinhas", "Teixeira de Freitas", "Paulo Afonso",
-  "Eunápolis", "Simões Filho", "Barreiras", "Luís Eduardo Magalhães", "Porto Seguro",
-  "Dias d'Ávila", "Candeias", "Jacobina", "Senhor do Bonfim", "Valença", "Guanambi",
-  "Serrinha", "Irecê", "Brumado", "Conde", "Santo Antônio de Jesus", "Campo Formoso",
-  "Bom Jesus da Lapa", "Jequié", "Euclides da Cunha", "Ribeira do Pombal", "Casa Nova",
-  "Santo Amaro", "Cruz das Almas", "Macaúbas", "Esplanada", "Amargosa", "Ipiaú",
-  "Mata de São João", "Santa Maria da Vitória", "Xique-Xique", "Remanso", "Poções",
-  "Santana", "Livramento de Nossa Senhora", "Seabra", "Tucano", "Camamu", "Outro",
-];
+import {
+  formatCpf,
+  caracteresNomeValidos,
+} from "../validators/validacoesCadastroGestante";
 
 const DEFICIENCIA_OPCOES = [
   { value: "Física", id: "def-fisica" },
@@ -37,12 +27,25 @@ const DEFICIENCIA_OPCOES = [
 
 interface StepDadosPessoaisProps {
   form: FormCadastroGestante;
-  updateField: <K extends keyof FormCadastroGestante>(key: K, value: FormCadastroGestante[K]) => void;
-  erros: { cpf?: string; cns?: string; nomeCompleto?: string; dataNascimento?: string };
+  updateField: <K extends keyof FormCadastroGestante>(
+    key: K,
+    value: FormCadastroGestante[K],
+  ) => void;
+  erros: {
+    cpf?: string;
+    cns?: string;
+    nomeCompleto?: string;
+    dataNascimento?: string;
+  };
   pacienteLocalizado?: boolean;
 }
 
-export function StepDadosPessoais({ form, updateField, erros, pacienteLocalizado }: StepDadosPessoaisProps) {
+export function StepDadosPessoais({
+  form,
+  updateField,
+  erros,
+  pacienteLocalizado,
+}: StepDadosPessoaisProps) {
   const cpfDigits = form.cpf.replace(/\D/g, "").slice(0, 11);
   const cnsDigits = form.cns.replace(/\D/g, "").slice(0, 15);
   const dataNascValida = (() => {
@@ -50,6 +53,9 @@ export function StepDadosPessoais({ form, updateField, erros, pacienteLocalizado
     if (!d || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
     return new Date(d).getTime() <= new Date().setHours(0, 0, 0, 0);
   })();
+  const idadeForaDoIntervalo =
+    typeof erros.dataNascimento === "string" &&
+    erros.dataNascimento.includes("Idade deve estar entre 9 e 60 anos");
 
   return (
     <Card className="bg-muted/30 border-0 shadow-none">
@@ -60,7 +66,10 @@ export function StepDadosPessoais({ form, updateField, erros, pacienteLocalizado
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="cpf">
-              CPF <span className="text-red-500">*</span> <span className="text-xs font-normal text-muted-foreground">(obrigatório se CNS vazio)</span>
+              CPF <span className="text-red-500">*</span>{" "}
+              <span className="text-xs font-normal text-muted-foreground">
+                (obrigatório se CNS vazio)
+              </span>
             </Label>
             <Input
               id="cpf"
@@ -68,39 +77,66 @@ export function StepDadosPessoais({ form, updateField, erros, pacienteLocalizado
               value={form.cpf}
               onChange={(e) => updateField("cpf", formatCpf(e.target.value))}
               maxLength={14}
-              className={cpfDigits.length === 11 && erros.cpf ? "border-destructive" : ""}
+              className={
+                cpfDigits.length === 11 && erros.cpf ? "border-destructive" : ""
+              }
               disabled={pacienteLocalizado}
             />
-            {erros.cpf && <p className="text-sm text-destructive">{erros.cpf}</p>}
+            {erros.cpf && (
+              <p className="text-sm text-destructive">{erros.cpf}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="cns">
-              Cartão Nacional de Saúde <span className="text-red-500">*</span> <span className="text-xs font-normal text-muted-foreground">(obrigatório se CPF vazio)</span>
+              Cartão Nacional de Saúde <span className="text-red-500">*</span>{" "}
+              <span className="text-xs font-normal text-muted-foreground">
+                (obrigatório se CPF vazio)
+              </span>
             </Label>
             <Input
               id="cns"
               placeholder="Cartão Nacional de Saúde"
               value={form.cns}
-              onChange={(e) => updateField("cns", e.target.value.replace(/\D/g, "").slice(0, 15))}
+              onChange={(e) =>
+                updateField(
+                  "cns",
+                  e.target.value.replace(/\D/g, "").slice(0, 15),
+                )
+              }
               maxLength={15}
-              className={cnsDigits.length === 15 && erros.cns ? "border-destructive" : ""}
+              className={
+                cnsDigits.length === 15 && erros.cns ? "border-destructive" : ""
+              }
               disabled={pacienteLocalizado}
             />
-            {erros.cns && <p className="text-sm text-destructive">{erros.cns}</p>}
+            {erros.cns && (
+              <p className="text-sm text-destructive">{erros.cns}</p>
+            )}
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="nome">Nome completo <span className="text-red-500">*</span></Label>
+          <Label htmlFor="nome">
+            Nome completo <span className="text-red-500">*</span>
+          </Label>
           <Input
             id="nome"
             placeholder="Nome completo da gestante (até 70 caracteres)"
             value={form.nomeCompleto}
-            onChange={(e) => updateField("nomeCompleto", e.target.value.slice(0, 70))}
+            onChange={(e) =>
+              updateField("nomeCompleto", e.target.value.slice(0, 70))
+            }
             maxLength={70}
-            className={form.nomeCompleto.trim() && !caracteresNomeValidos(form.nomeCompleto) ? "border-destructive" : ""}
+            className={
+              form.nomeCompleto.trim() &&
+              !caracteresNomeValidos(form.nomeCompleto)
+                ? "border-destructive"
+                : ""
+            }
           />
-          {erros.nomeCompleto && <p className="text-sm text-destructive">{erros.nomeCompleto}</p>}
+          {erros.nomeCompleto && (
+            <p className="text-sm text-destructive">{erros.nomeCompleto}</p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -110,7 +146,9 @@ export function StepDadosPessoais({ form, updateField, erros, pacienteLocalizado
               <input
                 type="checkbox"
                 checked={form.nomeSocialPrincipal}
-                onChange={(e) => updateField("nomeSocialPrincipal", e.target.checked)}
+                onChange={(e) =>
+                  updateField("nomeSocialPrincipal", e.target.checked)
+                }
                 className="rounded"
               />
               Principal
@@ -120,19 +158,25 @@ export function StepDadosPessoais({ form, updateField, erros, pacienteLocalizado
             id="nome-social"
             placeholder="Nome social (se aplicável)"
             value={form.nomeSocial}
-            onChange={(e) => updateField("nomeSocial", e.target.value.slice(0, 70))}
+            onChange={(e) =>
+              updateField("nomeSocial", e.target.value.slice(0, 70))
+            }
             maxLength={70}
           />
         </div>
 
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <Label htmlFor="nome-mae">Nome da Mãe <span className="text-red-500">*</span></Label>
+            <Label htmlFor="nome-mae">
+              Nome da Mãe <span className="text-red-500">*</span>
+            </Label>
             <label className="flex items-center gap-1.5 text-xs font-normal text-muted-foreground cursor-pointer">
               <input
                 type="checkbox"
                 checked={form.nomeMaeIgnorada}
-                onChange={(e) => updateField("nomeMaeIgnorada", e.target.checked)}
+                onChange={(e) =>
+                  updateField("nomeMaeIgnorada", e.target.checked)
+                }
                 className="rounded"
               />
               Ignorada
@@ -142,19 +186,25 @@ export function StepDadosPessoais({ form, updateField, erros, pacienteLocalizado
             id="nome-mae"
             placeholder="Até 70 caracteres"
             value={form.nomeMae}
-            onChange={(e) => updateField("nomeMae", e.target.value.slice(0, 70))}
+            onChange={(e) =>
+              updateField("nomeMae", e.target.value.slice(0, 70))
+            }
             maxLength={70}
             disabled={form.nomeMaeIgnorada}
           />
         </div>
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <Label htmlFor="nome-pai">Nome do Pai <span className="text-red-500">*</span></Label>
+            <Label htmlFor="nome-pai">
+              Nome do Pai <span className="text-red-500">*</span>
+            </Label>
             <label className="flex items-center gap-1.5 text-xs font-normal text-muted-foreground cursor-pointer">
               <input
                 type="checkbox"
                 checked={form.nomePaiIgnorado}
-                onChange={(e) => updateField("nomePaiIgnorado", e.target.checked)}
+                onChange={(e) =>
+                  updateField("nomePaiIgnorado", e.target.checked)
+                }
                 className="rounded"
               />
               Ignorado
@@ -164,7 +214,9 @@ export function StepDadosPessoais({ form, updateField, erros, pacienteLocalizado
             id="nome-pai"
             placeholder="Até 70 caracteres"
             value={form.nomePai}
-            onChange={(e) => updateField("nomePai", e.target.value.slice(0, 70))}
+            onChange={(e) =>
+              updateField("nomePai", e.target.value.slice(0, 70))
+            }
             maxLength={70}
             disabled={form.nomePaiIgnorado}
           />
@@ -172,8 +224,14 @@ export function StepDadosPessoais({ form, updateField, erros, pacienteLocalizado
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Raça/Cor <span className="text-red-500">*</span></Label>
-            <Select key={`racaCor-${form.racaCor}`} value={form.racaCor || undefined} onValueChange={(v) => updateField("racaCor", v)}>
+            <Label>
+              Raça/Cor <span className="text-red-500">*</span>
+            </Label>
+            <Select
+              key={`racaCor-${form.racaCor}`}
+              value={form.racaCor || undefined}
+              onValueChange={(v) => updateField("racaCor", v)}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
@@ -187,8 +245,14 @@ export function StepDadosPessoais({ form, updateField, erros, pacienteLocalizado
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Sexo <span className="text-red-500">*</span></Label>
-            <Select key={`sexo-${form.sexo}`} value={form.sexo || undefined} onValueChange={(v) => updateField("sexo", v)}>
+            <Label>
+              Sexo <span className="text-red-500">*</span>
+            </Label>
+            <Select
+              key={`sexo-${form.sexo}`}
+              value={form.sexo || undefined}
+              onValueChange={(v) => updateField("sexo", v)}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
@@ -202,7 +266,9 @@ export function StepDadosPessoais({ form, updateField, erros, pacienteLocalizado
         </div>
 
         <div className="space-y-2">
-          <Label>Possui Deficiência?</Label>
+          <Label>
+            Possui Deficiência?<span className="text-red-500">*</span>
+          </Label>
           <div className="flex gap-4">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -223,19 +289,37 @@ export function StepDadosPessoais({ form, updateField, erros, pacienteLocalizado
               <span className="text-sm">Não</span>
             </label>
           </div>
+          {form.possuiDeficiencia == null && (
+            <p className="text-xs text-muted-foreground">
+              Selecione uma opção para continuar.
+            </p>
+          )}
           {form.possuiDeficiencia && (
             <div className="mt-2 space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">Selecione o(s) tipo(s):</p>
+              <p className="text-xs font-medium text-muted-foreground">
+                Selecione o(s) tipo(s):
+              </p>
               <div className="flex flex-wrap gap-x-6 gap-y-2">
                 {DEFICIENCIA_OPCOES.map((op) => (
-                  <label key={op.id} className="flex items-center gap-2 cursor-pointer">
+                  <label
+                    key={op.id}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
                     <input
                       type="checkbox"
                       id={op.id}
                       checked={form.deficienciaTipos.includes(op.value)}
                       onChange={(e) => {
-                        if (e.target.checked) updateField("deficienciaTipos", [...form.deficienciaTipos, op.value]);
-                        else updateField("deficienciaTipos", form.deficienciaTipos.filter((v) => v !== op.value));
+                        if (e.target.checked)
+                          updateField("deficienciaTipos", [
+                            ...form.deficienciaTipos,
+                            op.value,
+                          ]);
+                        else
+                          updateField(
+                            "deficienciaTipos",
+                            form.deficienciaTipos.filter((v) => v !== op.value),
+                          );
                       }}
                       className="rounded border-input"
                     />
@@ -256,33 +340,43 @@ export function StepDadosPessoais({ form, updateField, erros, pacienteLocalizado
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Identidade de gênero</Label>
-            <Select value={form.identidadeGenero || undefined} onValueChange={(v) => updateField("identidadeGenero", v)}>
+            <Select
+              key={`identidadeGenero-${form.identidadeGenero}`}
+              value={form.identidadeGenero || undefined}
+              onValueChange={(v) => updateField("identidadeGenero", v)}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="mulher-cis">Mulher cisgênero</SelectItem>
+                <SelectItem value="homem-cis">Homem cisgênero</SelectItem>
                 <SelectItem value="mulher-trans">Mulher transgênero</SelectItem>
                 <SelectItem value="homem-trans">Homem transgênero</SelectItem>
-                <SelectItem value="nao-binario">Não-binário</SelectItem>
-                <SelectItem value="outro">Outro</SelectItem>
-                <SelectItem value="prefere-nao-declarar">Prefere não declarar</SelectItem>
+                <SelectItem value="travesti">Travesti</SelectItem>
+                <SelectItem value="pessoa-nao-binaria">
+                  Pessoa não-binária
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
             <Label>Orientação sexual</Label>
-            <Select value={form.orientacaoSexual || undefined} onValueChange={(v) => updateField("orientacaoSexual", v)}>
+            <Select
+              key={`orientacaoSexual-${form.orientacaoSexual}`}
+              value={form.orientacaoSexual || undefined}
+              onValueChange={(v) => updateField("orientacaoSexual", v)}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="heterossexual">Heterossexual</SelectItem>
-                <SelectItem value="homossexual">Homossexual</SelectItem>
+                <SelectItem value="gay">Gay</SelectItem>
+                <SelectItem value="lesbica">Lésbica</SelectItem>
                 <SelectItem value="bissexual">Bissexual</SelectItem>
+                <SelectItem value="pansexual">Pansexual</SelectItem>
                 <SelectItem value="assexual">Assexual</SelectItem>
-                <SelectItem value="outro">Outro</SelectItem>
-                <SelectItem value="prefere-nao-declarar">Prefere não declarar</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -290,29 +384,24 @@ export function StepDadosPessoais({ form, updateField, erros, pacienteLocalizado
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="nascimento">Data de nascimento <span className="text-red-500">*</span></Label>
+            <Label htmlFor="nascimento">
+              Data de nascimento <span className="text-red-500">*</span>
+            </Label>
             <Input
               id="nascimento"
               type="date"
               value={form.dataNascimento}
               onChange={(e) => updateField("dataNascimento", e.target.value)}
-              className={form.dataNascimento.trim() && !dataNascValida ? "border-destructive" : ""}
+              className={
+                form.dataNascimento.trim() && !dataNascValida
+                  ? "border-destructive"
+                  : ""
+              }
+              disabled={idadeForaDoIntervalo}
             />
-            {erros.dataNascimento && <p className="text-sm text-destructive">{erros.dataNascimento}</p>}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="municipio-nascimento">Município de nascimento</Label>
-            <Select value={form.municipioNascimento || undefined} onValueChange={(v) => updateField("municipioNascimento", v)}>
-              <SelectTrigger id="municipio-nascimento">
-                <SelectValue placeholder="Selecione o município" />
-              </SelectTrigger>
-              <SelectContent>
-                {MUNICIPIOS_NASCIMENTO.map((nome) => (
-                  <SelectItem key={nome} value={nome}>{nome}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-[10px] text-muted-foreground">Usado na recuperação de senha (pergunta de segurança)</p>
+            {erros.dataNascimento && (
+              <p className="text-sm text-destructive">{erros.dataNascimento}</p>
+            )}
           </div>
         </div>
       </CardContent>

@@ -38,7 +38,6 @@ function gerarOpcoes(correta: string, tipo: string): { id: string; texto: string
     nome: ["Ana Maria Santos", "Fernanda Oliveira", "Carla Souza Lima", "Patrícia Costa", "Juliana Ferreira"],
     nomeMae: ["Maria da Silva", "Ana Paula Oliveira", "Francisca Santos", "Tereza Costa", "Antônia Lima"],
     data: ["1990-05-15", "1988-11-20", "1992-03-10", "1985-07-22", "1995-01-08"],
-    municipioNascimento: ["Feira de Santana", "Vitória da Conquista", "Camaçari", "Lauro de Freitas", "Ilhéus", "Juazeiro", "Itabuna", "Alagoinhas"],
   };
   const falsas = (opcoesFalsas[tipo] ?? opcoesFalsas.nome).filter((x) => x !== correta);
   while (falsas.length < 2) falsas.push(`Opção ${falsas.length + 1}`);
@@ -61,12 +60,10 @@ async function obterNovaPergunta(pool: Pool, cpfCns: string): Promise<{ pergunta
   );
   const row = res.rows[0];
   if (!row) return null;
-  const municipioNasc = (row.municipio_nascimento ?? "").trim();
   const tipos = [
     { id: "nome", pergunta: "Qual o nome completo cadastrado?", valor: row.nome_completo ?? "" },
     { id: "nomeMae", pergunta: "Qual o nome da mãe?", valor: (row.nome_mae ?? "").trim() },
     { id: "data", pergunta: "Qual a data de nascimento?", valor: row.data_nascimento ? row.data_nascimento.toISOString().slice(0, 10) : "" },
-    { id: "municipioNascimento", pergunta: "Qual o município de nascimento?", valor: municipioNasc },
   ].filter((t) => t.valor && t.valor !== "IGNORADA" && t.valor !== "IGNORADO");
   if (tipos.length === 0) return null;
   const escolhido = tipos[Math.floor(Math.random() * tipos.length)];

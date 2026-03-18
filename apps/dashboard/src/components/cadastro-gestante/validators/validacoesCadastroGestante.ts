@@ -58,17 +58,17 @@ export interface FormCadastroGestante {
   nomePai: string;
   nomePaiIgnorado: boolean;
   dataNascimento: string;
-  municipioNascimento: string;
   racaCor: string;
   sexo: string;
-  possuiDeficiencia: boolean;
+  possuiDeficiencia: boolean | null;
   deficienciaTipos: string[];
   deficiencia: string;
   identidadeGenero: string;
   orientacaoSexual: string;
   ddd: string;
   celularPrincipal: string;
-  telefoneAlternativo: string;
+  dddAlternativo: string;
+  celularAlternativo: string;
   temWhatsappAlternativo: boolean;
   dddResidencial: string;
   telefoneResidencial: string;
@@ -86,7 +86,7 @@ export interface FormCadastroGestante {
   distritoId: string;
   ubsId: string;
   descobrimento: string;
-  programaSocial: string;
+  programaSocial: string[];
   nis: string;
   planoSaude: string;
   manterAcompanhamentoUbs: string;
@@ -106,6 +106,19 @@ function onlyDigits(s: string, max: number): string {
   return (s ?? "").replace(/\D/g, "").slice(0, max);
 }
 
+function calcAgeYears(isoDate: string): number | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return null;
+  const [y, m, d] = isoDate.split("-").map((x) => parseInt(x, 10));
+  if (!y || !m || !d) return null;
+  const today = new Date();
+  const tY = today.getFullYear();
+  const tM = today.getMonth() + 1;
+  const tD = today.getDate();
+  let age = tY - y;
+  if (tM < m || (tM === m && tD < d)) age -= 1;
+  return age;
+}
+
 export function validarStep1(form: FormCadastroGestante): boolean {
   const cpfDigits = onlyDigits(form.cpf, 11);
   const cnsDigits = onlyDigits(form.cns, 15);
@@ -121,7 +134,10 @@ export function validarStep1(form: FormCadastroGestante): boolean {
   const d = form.dataNascimento.trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
   if (new Date(d).getTime() > new Date().setHours(0, 0, 0, 0)) return false;
+  const age = calcAgeYears(d);
+  if (age == null || age < 9 || age > 60) return false;
   if (!form.racaCor.trim() || !form.sexo.trim()) return false;
+  if (form.possuiDeficiencia == null) return false;
   if (form.possuiDeficiencia && !form.deficienciaTipos.length && !form.deficiencia.trim()) return false;
   return true;
 }
@@ -142,11 +158,11 @@ export function validarStep2(form: FormCadastroGestante): boolean {
 }
 
 export function validarStep3(form: FormCadastroGestante): boolean {
-  if (!form.descobrimento || !form.programaSocial) return false;
+  if (!form.descobrimento || !Array.isArray(form.programaSocial) || form.programaSocial.length === 0) return false;
   const dumOk = !form.dum.trim() || validarDum(form.dum) === null;
   if (!dumOk) return false;
   const nisDig = onlyDigits(form.nis, 11);
-  if (form.programaSocial === "bolsa-familia" && nisDig.length !== 11) return false;
+  if (form.programaSocial.includes("bolsa-familia") && nisDig.length !== 11) return false;
   return true;
 }
 
@@ -165,13 +181,15 @@ export function getErrosStep1(form: FormCadastroGestante): { cpf?: string; cns?:
   const dataNascValida = (() => {
     const d = form.dataNascimento.trim();
     if (!d || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
-    return new Date(d).getTime() <= new Date().setHours(0, 0, 0, 0);
+    if (new Date(d).getTime() > new Date().setHours(0, 0, 0, 0)) return false;
+    const age = calcAgeYears(d);
+    return age != null && age >= 9 && age <= 60;
   })();
   return {
     cpf: cpfDigits.length === 11 && cpfValido ? cpfValido : undefined,
     cns: cnsDigits.length === 15 && cnsValido ? cnsValido : undefined,
     nomeCompleto: form.nomeCompleto.trim() && !caracteresNomeValidos(form.nomeCompleto) ? "Existem caracteres inválidos" : undefined,
-    dataNascimento: form.dataNascimento.trim() && !dataNascValida ? "Data inválida" : undefined,
+    dataNascimento: form.dataNascimento.trim() && !dataNascValida ? "Idade deve estar entre 9 e 60 anos" : undefined,
   };
 }
 
@@ -199,7 +217,7 @@ export function getFaltando(etapa: 1 | 2 | 3 | 4, form: FormCadastroGestante): s
   const emailOk = !form.email.trim() || (form.email.includes("@") && form.email.includes("."));
   const dumOk = !form.dum.trim() || validarDum(form.dum) === null;
   const nisDig = onlyDigits(form.nis, 11);
-  const nisOk = form.programaSocial !== "bolsa-familia" || nisDig.length === 11;
+  const nisOk = !form.programaSocial.includes("bolsa-familia") || nisDig.length === 11;
   const senhaTrim = form.senha.trim();
   const senhaConfirmaTrim = form.senhaConfirma.trim();
 

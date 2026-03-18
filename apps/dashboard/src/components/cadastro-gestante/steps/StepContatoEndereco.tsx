@@ -13,11 +13,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 import type { FormCadastroGestante } from "../validators/validacoesCadastroGestante";
-import { formatCep, formatPhone } from "../validators/validacoesCadastroGestante";
+import { formatCep } from "../validators/validacoesCadastroGestante";
 
 interface StepContatoEnderecoProps {
   form: FormCadastroGestante;
-  updateField: <K extends keyof FormCadastroGestante>(key: K, value: FormCadastroGestante[K]) => void;
+  updateField: <K extends keyof FormCadastroGestante>(
+    key: K,
+    value: FormCadastroGestante[K],
+  ) => void;
   erroCep: string;
   cepBuscando: boolean;
   onPesquisarCep: () => void;
@@ -30,6 +33,11 @@ export function StepContatoEndereco({
   cepBuscando,
   onPesquisarCep,
 }: StepContatoEnderecoProps) {
+  const enderecoBloqueado =
+    form.cep.replace(/\D/g, "").length === 8 &&
+    Boolean(
+      form.tipoLogradouro || form.logradouro || form.bairro || form.municipio,
+    );
   return (
     <>
       <Card className="bg-muted/30 border-0 shadow-none">
@@ -39,63 +47,129 @@ export function StepContatoEndereco({
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="ddd">DDD <span className="text-red-500">*</span></Label>
+              <Label htmlFor="ddd">
+                DDD <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="ddd"
                 placeholder="71"
                 value={form.ddd}
-                onChange={(e) => updateField("ddd", e.target.value.replace(/\D/g, "").slice(0, 2))}
+                onChange={(e) =>
+                  updateField(
+                    "ddd",
+                    e.target.value.replace(/\D/g, "").slice(0, 2),
+                  )
+                }
                 maxLength={2}
                 inputMode="numeric"
               />
               <p className="text-[10px] text-muted-foreground">2 dígitos</p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="celular">Telefone celular principal <span className="text-red-500">*</span></Label>
+              <Label htmlFor="celular">
+                Telefone celular principal{" "}
+                <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="celular"
                 placeholder="99999-9999"
                 value={form.celularPrincipal}
-                onChange={(e) => updateField("celularPrincipal", e.target.value.replace(/\D/g, "").slice(0, 9))}
+                onChange={(e) =>
+                  updateField(
+                    "celularPrincipal",
+                    e.target.value.replace(/\D/g, "").slice(0, 9),
+                  )
+                }
                 maxLength={9}
                 inputMode="numeric"
               />
-              <p className="text-[10px] text-muted-foreground">9 dígitos, inicia com 9</p>
+              <p className="text-[10px] text-muted-foreground">
+                9 dígitos, inicia com 9
+              </p>
             </div>
-            <div className="space-y-2 flex flex-col justify-end">
-              <label className="flex items-center gap-2 cursor-pointer h-9">
+            <div className="space-y-2">
+              <Label className="invisible">WhatsApp</Label>
+              <div className="h-9 flex items-center">
                 <input
+                  id="tem-whatsapp"
                   type="checkbox"
                   checked={form.temWhatsapp}
                   onChange={(e) => updateField("temWhatsapp", e.target.checked)}
-                  className="rounded border-input"
+                  className="peer sr-only"
                 />
-                <span className="text-sm">WhatsApp</span>
-              </label>
+                <Label
+                  htmlFor="tem-whatsapp"
+                  className="h-9 w-full select-none cursor-pointer inline-flex items-center justify-center gap-2 rounded-md border px-3 text-sm font-medium transition-colors
+                    border-[#25D366]/40 bg-white text-foreground hover:bg-[#25D366]/10
+                    peer-checked:border-[#25D366] peer-checked:bg-[#25D366] peer-checked:text-white peer-checked:hover:bg-[#20BD5B]
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/40 focus-visible:ring-offset-2"
+                >
+                  WhatsApp
+                </Label>
+              </div>
+              <p className="text-[10px] text-muted-foreground invisible">.</p>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-2">
+              <Label htmlFor="ddd-alt">DDD (alternativo)</Label>
+              <Input
+                id="ddd-alt"
+                placeholder="71"
+                value={form.dddAlternativo}
+                onChange={(e) =>
+                  updateField(
+                    "dddAlternativo",
+                    e.target.value.replace(/\D/g, "").slice(0, 2),
+                  )
+                }
+                maxLength={2}
+                inputMode="numeric"
+              />
+              <p className="text-[10px] text-muted-foreground">2 dígitos</p>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="tel-alt">Telefone celular alternativo</Label>
               <Input
                 id="tel-alt"
-                placeholder="(71) 99999-9999"
-                value={form.telefoneAlternativo}
-                onChange={(e) => updateField("telefoneAlternativo", formatPhone(e.target.value))}
-                maxLength={15}
+                placeholder="99999-9999"
+                value={form.celularAlternativo}
+                onChange={(e) =>
+                  updateField(
+                    "celularAlternativo",
+                    e.target.value.replace(/\D/g, "").slice(0, 9),
+                  )
+                }
+                maxLength={9}
                 inputMode="numeric"
               />
+              <p className="text-[10px] text-muted-foreground">
+                9 dígitos, inicia com 9
+              </p>
             </div>
-            <div className="space-y-2 flex flex-col justify-end">
-              <label className="flex items-center gap-2 cursor-pointer h-9">
+            <div className="space-y-2">
+              <Label className="invisible">Também é WhatsApp</Label>
+              <div className="h-9 flex items-center">
                 <input
+                  id="tem-whatsapp-alt"
                   type="checkbox"
                   checked={form.temWhatsappAlternativo}
-                  onChange={(e) => updateField("temWhatsappAlternativo", e.target.checked)}
-                  className="rounded border-input"
+                  onChange={(e) =>
+                    updateField("temWhatsappAlternativo", e.target.checked)
+                  }
+                  className="peer sr-only"
                 />
-                <span className="text-sm">Também é WhatsApp</span>
-              </label>
+                <Label
+                  htmlFor="tem-whatsapp-alt"
+                  className="h-9 w-full select-none cursor-pointer inline-flex items-center justify-center gap-2 rounded-md border px-3 text-sm font-medium transition-colors
+                    border-[#25D366]/40 bg-white text-foreground hover:bg-[#25D366]/10
+                    peer-checked:border-[#25D366] peer-checked:bg-[#25D366] peer-checked:text-white peer-checked:hover:bg-[#20BD5B]
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/40 focus-visible:ring-offset-2"
+                >
+                  WhatsApp
+                </Label>
+              </div>
+              <p className="text-[10px] text-muted-foreground invisible">.</p>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -105,7 +179,12 @@ export function StepContatoEndereco({
                 id="ddd-res"
                 placeholder="71"
                 value={form.dddResidencial}
-                onChange={(e) => updateField("dddResidencial", e.target.value.replace(/\D/g, "").slice(0, 2))}
+                onChange={(e) =>
+                  updateField(
+                    "dddResidencial",
+                    e.target.value.replace(/\D/g, "").slice(0, 2),
+                  )
+                }
                 maxLength={2}
                 inputMode="numeric"
               />
@@ -116,11 +195,18 @@ export function StepContatoEndereco({
                 id="tel-res"
                 placeholder="3333-4444"
                 value={form.telefoneResidencial}
-                onChange={(e) => updateField("telefoneResidencial", e.target.value.replace(/\D/g, "").slice(0, 8))}
+                onChange={(e) =>
+                  updateField(
+                    "telefoneResidencial",
+                    e.target.value.replace(/\D/g, "").slice(0, 8),
+                  )
+                }
                 maxLength={8}
                 inputMode="numeric"
               />
-              <p className="text-[10px] text-muted-foreground">8 dígitos, inicia com 2 a 5</p>
+              <p className="text-[10px] text-muted-foreground">
+                8 dígitos, inicia com 2 a 5
+              </p>
             </div>
           </div>
           <div className="space-y-2">
@@ -132,9 +218,13 @@ export function StepContatoEndereco({
               value={form.email}
               onChange={(e) => updateField("email", e.target.value)}
             />
-            <p className="text-[10px] text-muted-foreground">Deve conter @ e ponto</p>
+            <p className="text-[10px] text-muted-foreground">
+              Deve conter @ e ponto
+            </p>
             {form.email.trim() && !form.email.includes("@") && (
-              <p className="text-xs text-destructive">E-mail deve conter @ e ponto.</p>
+              <p className="text-xs text-destructive">
+                E-mail deve conter @ e ponto.
+              </p>
             )}
           </div>
         </CardContent>
@@ -149,13 +239,17 @@ export function StepContatoEndereco({
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="cep">CEP <span className="text-red-500">*</span></Label>
+              <Label htmlFor="cep">
+                CEP <span className="text-red-500">*</span>
+              </Label>
               <div className="flex gap-2">
                 <Input
                   id="cep"
                   placeholder="00000-000"
                   value={form.cep}
-                  onChange={(e) => { updateField("cep", formatCep(e.target.value)); }}
+                  onChange={(e) => {
+                    updateField("cep", formatCep(e.target.value));
+                  }}
                   maxLength={9}
                   className={erroCep ? "border-destructive" : ""}
                 />
@@ -164,14 +258,18 @@ export function StepContatoEndereco({
                   variant="outline"
                   size="icon"
                   onClick={onPesquisarCep}
-                  disabled={cepBuscando || form.cep.replace(/\D/g, "").length !== 8}
+                  disabled={
+                    cepBuscando || form.cep.replace(/\D/g, "").length !== 8
+                  }
                   title="Pesquisar CEP"
                 >
                   <Search className="w-4 h-4" />
                 </Button>
               </div>
               {erroCep && <p className="text-sm text-destructive">{erroCep}</p>}
-              <p className="text-[10px] text-muted-foreground">8 dígitos. Busca na base de CEP (ViaCEP).</p>
+              <p className="text-[10px] text-muted-foreground">
+                8 dígitos. Busca na base de CEP (ViaCEP).
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="municipio">Município</Label>
@@ -180,6 +278,7 @@ export function StepContatoEndereco({
                 placeholder="Preenchido pela busca CEP"
                 value={form.municipio}
                 onChange={(e) => updateField("municipio", e.target.value)}
+                disabled={enderecoBloqueado}
               />
             </div>
           </div>
@@ -187,7 +286,11 @@ export function StepContatoEndereco({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="tipo-logradouro">Tipo de logradouro</Label>
-              <Select value={form.tipoLogradouro} onValueChange={(v) => updateField("tipoLogradouro", v)}>
+              <Select
+                value={form.tipoLogradouro || undefined}
+                onValueChange={(v) => updateField("tipoLogradouro", v)}
+                disabled={enderecoBloqueado}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
@@ -201,35 +304,45 @@ export function StepContatoEndereco({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="logradouro">Logradouro <span className="text-red-500">*</span></Label>
+              <Label htmlFor="logradouro">
+                Logradouro <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="logradouro"
                 placeholder="Nome do logradouro"
                 value={form.logradouro}
                 onChange={(e) => updateField("logradouro", e.target.value)}
+                disabled={enderecoBloqueado}
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="bairro">Bairro <span className="text-red-500">*</span></Label>
+            <Label htmlFor="bairro">
+              Bairro <span className="text-red-500">*</span>
+            </Label>
             <Input
               id="bairro"
               placeholder="Bairro"
               value={form.bairro}
               onChange={(e) => updateField("bairro", e.target.value)}
+              disabled={enderecoBloqueado}
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Label htmlFor="numero">Número <span className="text-red-500">*</span></Label>
+                <Label htmlFor="numero">
+                  Número <span className="text-red-500">*</span>
+                </Label>
                 <label className="flex items-center gap-1.5 text-xs font-normal text-muted-foreground cursor-pointer">
                   <input
                     type="checkbox"
                     checked={form.numeroSemNumero}
-                    onChange={(e) => updateField("numeroSemNumero", e.target.checked)}
+                    onChange={(e) =>
+                      updateField("numeroSemNumero", e.target.checked)
+                    }
                     className="rounded border-input"
                   />
                   S/N

@@ -92,7 +92,14 @@ export default function PesquisaCidadaoPage() {
         setCarregando(false);
         return;
       }
-      if (data?.sucesso && data?.paciente) {
+      const paciente = data?.paciente;
+      const temPacienteValido =
+        data?.sucesso &&
+        paciente &&
+        typeof paciente === "object" &&
+        (paciente.nome != null && String(paciente.nome).trim() !== "" ||
+          (paciente.cpf != null && String(paciente.cpf).replace(/\D/g, "").length === 11));
+      if (temPacienteValido) {
         try {
           sessionStorage.setItem(
             "cnsPaciente",
@@ -105,11 +112,14 @@ export default function PesquisaCidadaoPage() {
       }
       setNotificacao(
         data?.mensagem ??
-          "Cidadão(ã) não localizado(a) na base federal. Use a busca alternativa abaixo.",
+          "Cidadão(ã) não localizado(a) no e-SUS, na base federal nem no cadastro local. Use a busca alternativa abaixo.",
       );
       setBuscaAlternativa("cns");
     } catch {
-      router.push("/gestante/cadastrar");
+      setNotificacao(
+        "Cidadão(ã) não localizado(a) no e-SUS, na base federal nem no cadastro local. Use a busca alternativa abaixo.",
+      );
+      setBuscaAlternativa("cns");
     }
     setCarregando(false);
   }

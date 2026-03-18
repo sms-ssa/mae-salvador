@@ -62,27 +62,41 @@ export function mapPacienteBaseFederalToDadosCadastro(
   const nomeMae = trim(paciente.nomeMae) || undefined;
   const nomePai = trim(paciente.nomePai) || undefined;
   const dataNascimento = toISODate(paciente.dataNascimento);
-  const sexo = mapSexo(paciente.sexo);
+  const sexo = mapSexo(paciente.sexo != null ? String(paciente.sexo) : undefined);
   const logradouro = trim(paciente.logradouro);
   const numero = trim(paciente.numero);
   const complemento = trim(paciente.complemento) || undefined;
   const bairro = trim(paciente.bairro);
   const cep = onlyDigits(paciente.cep, 8);
+  const nomeSocial = trim(paciente.nomeSocial) || undefined;
+  const racaCor = paciente.racaCor != null ? trim(String(paciente.racaCor)) || undefined : undefined;
+  const identidadeGenero = trim(paciente.identidadeGenero) || undefined;
+  const orientacaoSexual = trim(paciente.orientacaoSexual) || undefined;
+  const municipio = paciente.municipio != null ? trim(String(paciente.municipio)) || undefined : undefined;
+  const email = trim(paciente.emails) || undefined;
+  const telefoneCelular = trim(paciente.telefoneCelular) || undefined;
 
   const out: Partial<DadosPessoaisFromFederal> = {};
 
   if (cpf.length === 11) out.cpf = cpf;
   if (cns.length === 15) out.cns = cns;
   if (nomeCompleto) out.nomeCompleto = nomeCompleto.slice(0, 70);
+  if (nomeSocial) out.nomeSocial = nomeSocial.slice(0, 70);
   if (nomeMae) out.nomeMae = nomeMae.slice(0, 70);
   if (nomePai) out.nomePai = nomePai.slice(0, 70);
   if (dataNascimento) out.dataNascimento = dataNascimento;
   if (sexo) out.sexo = sexo;
+  if (racaCor) out.racaCor = racaCor;
+  if (identidadeGenero) out.identidadeGenero = identidadeGenero;
+  if (orientacaoSexual) out.orientacaoSexual = orientacaoSexual;
   if (logradouro) out.logradouro = logradouro.slice(0, 200);
   if (numero) out.numero = numero.slice(0, 20);
   if (complemento) out.complemento = complemento.slice(0, 50);
   if (bairro) out.bairro = bairro.slice(0, 100);
   if (cep.length === 8) out.cep = cep;
+  if (municipio) out.municipio = municipio.slice(0, 100);
+  if (email) out.email = email.slice(0, 100);
+  if (telefoneCelular) out.telefoneCelular = telefoneCelular.slice(0, 11);
 
   return out;
 }
@@ -100,16 +114,23 @@ export function citizenDtoToPacienteBaseFederal(
     cpf: trim(dto.cpf) ?? undefined,
     cns: trim(dto.cns) ?? undefined,
     nome: trim(dto.nomeCompleto) ?? undefined,
+    nomeSocial: trim(dto.nomeSocial) ?? undefined,
     nomeMae: trim(dto.nomeMae) ?? undefined,
     nomePai: trim(dto.nomePai) ?? undefined,
     dataNascimento: trim(dto.dataNascimento) ?? undefined,
     sexo: trim(dto.sexo) ?? undefined,
+    racaCor: trim(dto.racaCor) ?? undefined,
+    identidadeGenero: trim(dto.identidadeGenero) ?? undefined,
+    orientacaoSexual: trim(dto.orientacaoSexual) ?? undefined,
     logradouro: trim(dto.logradouro) ?? undefined,
     numero: trim(dto.numero) ?? undefined,
     complemento: trim(dto.complemento) ?? undefined,
     bairro: trim(dto.bairro) ?? undefined,
     cep: trim(dto.cep) ?? undefined,
+    municipio: trim(dto.municipio) ?? undefined,
     emails: trim(dto.email) ?? undefined,
     ddd: trim(dto.telefoneCelular)?.slice(0, 2) ?? undefined,
+    telefoneCelular: trim(dto.telefoneCelular) ?? undefined,
+    telefoneResidencial: trim(dto.telefoneResidencial) ?? undefined,
   };
 }
