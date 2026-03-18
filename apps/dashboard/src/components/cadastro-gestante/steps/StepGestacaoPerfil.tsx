@@ -110,7 +110,7 @@ export function StepGestacaoPerfil({ form, updateField, erroDum }: StepGestacaoP
                         className="cursor-pointer select-none rounded-md border px-3 py-2 text-sm font-medium transition-colors
                           bg-background hover:bg-muted/40
                           peer-checked:border-primary/50 peer-checked:bg-primary/10"
-                        title={op.hint ? `Opção ${op.hint}` : undefined}
+                        title={"hint" in op && op.hint ? `Opção ${op.hint}` : undefined}
                       >
                         {op.label}
                       </Label>
