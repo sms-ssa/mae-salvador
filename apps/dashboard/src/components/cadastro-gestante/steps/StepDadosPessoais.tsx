@@ -397,7 +397,6 @@ export function StepDadosPessoais({
                   ? "border-destructive"
                   : ""
               }
-              disabled={idadeForaDoIntervalo}
             />
             {erros.dataNascimento && (
               <p className="text-sm text-destructive">{erros.dataNascimento}</p>
