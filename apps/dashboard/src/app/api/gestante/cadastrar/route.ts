@@ -98,6 +98,20 @@ export async function POST(request: NextRequest) {
 
   const cpfValido = cpfRaw.length === 11;
   const cnsValido = cnsRaw.length === 15;
+  // Se o usuário preencheu parte do CPF/CNS, não devemos aceitar.
+  // Isso evita gravar CPF/CNS truncados quando o outro campo está correto.
+  if (cpfRaw.length > 0 && cpfRaw.length !== 11) {
+    return NextResponse.json(
+      { ok: false, erro: "CPF deve conter 11 dígitos." },
+      { status: 400 }
+    );
+  }
+  if (cnsRaw.length > 0 && cnsRaw.length !== 15) {
+    return NextResponse.json(
+      { ok: false, erro: "CNS deve conter 15 dígitos." },
+      { status: 400 }
+    );
+  }
   if (!cpfValido && !cnsValido) {
     return NextResponse.json(
       { ok: false, erro: "Informe CPF (11 dígitos) ou Cartão Nacional de Saúde (15 dígitos)." },

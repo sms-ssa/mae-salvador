@@ -192,14 +192,10 @@ function formatCpfValue(value: string): string {
 function isCitizenPrefillLike(value: unknown): value is CitizenPrefillLike {
   if (!value || typeof value !== "object") return false;
   const v = value as Record<string, unknown>;
-  // CitizenDto (e-SUS) usa `nomeCompleto`; PacienteBaseFederal (SOAP) usa `nome`.
-  // Se tiver `nomeCompleto` ou `racaCor`/`nomeSocial`, tratamos como DTO rico.
-  return (
-    "nomeCompleto" in v ||
-    "racaCor" in v ||
-    "nomeSocial" in v ||
-    "telefoneCelular" in v
-  );
+  // CitizenDto (e-SUS/SOAP) usa `nomeCompleto`; PacienteBaseFederal (legado) usa `nome`.
+  // Não inferimos pelo telefone/raca/nomeSocial, porque o legado também pode ter campos
+  // semelhantes. O sinal robusto aqui é `nomeCompleto`.
+  return "nomeCompleto" in v;
 }
 
 function formatCepValue(value: string): string {
@@ -368,6 +364,21 @@ export function useCadastroGestante() {
         const orientacaoSexualVal = normalizeOrientacaoSexualForSelect(
           dados.orientacaoSexual,
         );
+        const semInformacao = (v: unknown) => {
+          if (v == null) return true;
+          const s = String(v).trim();
+          if (!s) return true;
+          // Normaliza para ignorar variações de acento/caixa.
+          const norm = s
+            .toUpperCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "");
+          // Ex.: "SEM INFORMAÇÃO", "SEM INFORMACAO", "SEM INFORMACAO."
+          return /SEM\s*INFORMACAO/.test(norm);
+        };
+
+        const nomeMaeAusente = semInformacao(dados.nomeMae);
+        const nomePaiAusente = semInformacao(dados.nomePai);
         setPacienteLocalizado(true);
         setForm((prev) => ({
           ...prev,
@@ -375,8 +386,11 @@ export function useCadastroGestante() {
           cns: dados.cns ?? prev.cns,
           nomeCompleto: dados.nomeCompleto ?? prev.nomeCompleto,
           nomeSocial: dados.nomeSocial ?? prev.nomeSocial,
-          nomeMae: dados.nomeMae ?? prev.nomeMae,
-          nomePai: dados.nomePai ?? prev.nomePai,
+          // Se a base federal não trouxe nome da mãe/pai, marcamos como "Ignorado".
+          nomeMae: nomeMaeAusente ? "IGNORADA" : dados.nomeMae ?? prev.nomeMae,
+          nomeMaeIgnorada: nomeMaeAusente,
+          nomePai: nomePaiAusente ? "IGNORADO" : dados.nomePai ?? prev.nomePai,
+          nomePaiIgnorado: nomePaiAusente,
           dataNascimento: dados.dataNascimento ?? prev.dataNascimento,
           sexo: sexoVal || prev.sexo,
           racaCor: racaCorVal || prev.racaCor,

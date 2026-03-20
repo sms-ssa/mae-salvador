@@ -110,6 +110,7 @@ export default function GestanteLoginPage() {
             />
           </div>
           <p className="text-sm text-white/70">Programa Mãe Salvador</p>
+          <p className="text-sm text-white/50 mt-1">SMS &mdash; Caderneta Digital</p>
         </div>
 
         <Card className="bg-white/95 backdrop-blur shadow-2xl shadow-black/20 border-0">

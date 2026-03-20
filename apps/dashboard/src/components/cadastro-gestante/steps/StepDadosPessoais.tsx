@@ -16,6 +16,11 @@ import {
   caracteresNomeValidos,
 } from "../validators/validacoesCadastroGestante";
 
+function normalizarNome(s: string): string {
+  // Evita "espaço duplo" enquanto o usuário digita.
+  return s.replace(/\s{2,}/g, " ");
+}
+
 const DEFICIENCIA_OPCOES = [
   { value: "Física", id: "def-fisica" },
   { value: "Auditiva", id: "def-auditiva" },
@@ -35,6 +40,9 @@ interface StepDadosPessoaisProps {
     cpf?: string;
     cns?: string;
     nomeCompleto?: string;
+    nomeSocial?: string;
+    nomeMae?: string;
+    nomePai?: string;
     dataNascimento?: string;
   };
   pacienteLocalizado?: boolean;
@@ -55,7 +63,7 @@ export function StepDadosPessoais({
   })();
   const idadeForaDoIntervalo =
     typeof erros.dataNascimento === "string" &&
-    erros.dataNascimento.includes("Idade deve estar entre 9 e 60 anos");
+    erros.dataNascimento.includes("idade permitida: de 9 a 60 anos");
 
   return (
     <Card className="bg-muted/30 border-0 shadow-none">
@@ -78,7 +86,7 @@ export function StepDadosPessoais({
               onChange={(e) => updateField("cpf", formatCpf(e.target.value))}
               maxLength={14}
               className={
-                cpfDigits.length === 11 && erros.cpf ? "border-destructive" : ""
+                erros.cpf ? "border-destructive" : ""
               }
               disabled={pacienteLocalizado}
             />
@@ -105,7 +113,7 @@ export function StepDadosPessoais({
               }
               maxLength={15}
               className={
-                cnsDigits.length === 15 && erros.cns ? "border-destructive" : ""
+                erros.cns ? "border-destructive" : ""
               }
               disabled={pacienteLocalizado}
             />
@@ -123,9 +131,10 @@ export function StepDadosPessoais({
             id="nome"
             placeholder="Nome completo da gestante (até 70 caracteres)"
             value={form.nomeCompleto}
-            onChange={(e) =>
-              updateField("nomeCompleto", e.target.value.slice(0, 70))
-            }
+            onChange={(e) => {
+              const v = normalizarNome(e.target.value).slice(0, 70);
+              updateField("nomeCompleto", v);
+            }}
             maxLength={70}
             className={
               form.nomeCompleto.trim() &&
@@ -158,11 +167,23 @@ export function StepDadosPessoais({
             id="nome-social"
             placeholder="Nome social (se aplicável)"
             value={form.nomeSocial}
-            onChange={(e) =>
-              updateField("nomeSocial", e.target.value.slice(0, 70))
-            }
+            onChange={(e) => {
+              const v = normalizarNome(e.target.value).slice(0, 70);
+              updateField("nomeSocial", v);
+            }}
             maxLength={70}
+            className={
+              form.nomeSocial.trim() && !caracteresNomeValidos(form.nomeSocial)
+                ? "border-destructive"
+                : ""
+            }
           />
+          <p className="text-xs text-muted-foreground">
+            Opcional. Informe apenas se desejar usar seu nome social no acesso.
+          </p>
+          {erros.nomeSocial && (
+            <p className="text-sm text-destructive">{erros.nomeSocial}</p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -186,12 +207,23 @@ export function StepDadosPessoais({
             id="nome-mae"
             placeholder="Até 70 caracteres"
             value={form.nomeMae}
-            onChange={(e) =>
-              updateField("nomeMae", e.target.value.slice(0, 70))
-            }
+            onChange={(e) => {
+              const v = normalizarNome(e.target.value).slice(0, 70);
+              updateField("nomeMae", v);
+            }}
             maxLength={70}
             disabled={form.nomeMaeIgnorada}
+            className={
+              !form.nomeMaeIgnorada &&
+              form.nomeMae.trim() &&
+              !caracteresNomeValidos(form.nomeMae)
+                ? "border-destructive"
+                : ""
+            }
           />
+          {erros.nomeMae && !form.nomeMaeIgnorada && (
+            <p className="text-sm text-destructive">{erros.nomeMae}</p>
+          )}
         </div>
         <div className="space-y-2">
           <div className="flex items-center gap-2">
@@ -214,12 +246,23 @@ export function StepDadosPessoais({
             id="nome-pai"
             placeholder="Até 70 caracteres"
             value={form.nomePai}
-            onChange={(e) =>
-              updateField("nomePai", e.target.value.slice(0, 70))
-            }
+            onChange={(e) => {
+              const v = normalizarNome(e.target.value).slice(0, 70);
+              updateField("nomePai", v);
+            }}
             maxLength={70}
             disabled={form.nomePaiIgnorado}
+            className={
+              !form.nomePaiIgnorado &&
+              form.nomePai.trim() &&
+              !caracteresNomeValidos(form.nomePai)
+                ? "border-destructive"
+                : ""
+            }
           />
+          {erros.nomePai && !form.nomePaiIgnorado && (
+            <p className="text-sm text-destructive">{erros.nomePai}</p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -93,17 +93,22 @@ export default function PesquisaCidadaoPage() {
         return;
       }
       const paciente = data?.paciente;
+      const cpfDefinitivo =
+        paciente?.cpf != null
+          ? String(paciente.cpf).replace(/\D/g, "")
+          : "";
+      const cnsDefinitivo =
+        paciente?.cns != null ? String(paciente.cns).replace(/\D/g, "") : "";
       const temPacienteValido =
         data?.sucesso &&
         paciente &&
         typeof paciente === "object" &&
-        (paciente.nome != null && String(paciente.nome).trim() !== "" ||
-          (paciente.cpf != null && String(paciente.cpf).replace(/\D/g, "").length === 11));
+        (cpfDefinitivo.length === 11 || cnsDefinitivo.length === 15);
       if (temPacienteValido) {
         try {
           sessionStorage.setItem(
             "cnsPaciente",
-            JSON.stringify(data.citizen ?? data.paciente),
+            JSON.stringify(data.paciente ?? data.citizen),
           );
         } catch {}
         router.push("/gestante/cadastrar?fromCns=1");
@@ -111,13 +116,12 @@ export default function PesquisaCidadaoPage() {
         return;
       }
       setNotificacao(
-        data?.mensagem ??
-          "Cidadão(ã) não localizado(a) no e-SUS, na base federal nem no cadastro local. Use a busca alternativa abaixo.",
+        "cidadão(ã) não localizado(a) no e-SUS PEC nem no CADWEB pelo CPF. Use a busca alternativa abaixo.",
       );
       setBuscaAlternativa("cns");
     } catch {
       setNotificacao(
-        "Cidadão(ã) não localizado(a) no e-SUS, na base federal nem no cadastro local. Use a busca alternativa abaixo.",
+        "Cidadão(ã) não localizado(a) no e-SUS PEC nem no CADWEB pelo CPF. Use a busca alternativa abaixo.",
       );
       setBuscaAlternativa("cns");
     }
@@ -159,19 +163,79 @@ export default function PesquisaCidadaoPage() {
         setCarregando(false);
         return;
       }
+
+      // Primeiro localiza na base federal; depois verifica se já existe usuário
+      // no portal também pelo CPF retornado (caso o cadastro local esteja
+      // associado ao CPF e o campo de CNS esteja vazio).
       const res = await fetch(`/api/cns/buscar?cns=${encodeURIComponent(dig)}`);
       const data = await res.json().catch(() => ({}));
-      if (data.sucesso && data.paciente) {
+      if (data?.sucesso && data?.paciente) {
+        const payload = data.paciente ?? data.citizen;
         try {
-          sessionStorage.setItem(
-            "cnsPaciente",
-            JSON.stringify(data.citizen ?? data.paciente),
-          );
+          sessionStorage.setItem("cnsPaciente", JSON.stringify(payload));
         } catch {}
+
+        const cpfEncontrado =
+          payload?.cpf != null
+            ? String(payload.cpf).replace(/\D/g, "").slice(0, 11)
+            : "";
+        const cnsEncontrado =
+          payload?.cns != null
+            ? String(payload.cns).replace(/\D/g, "").slice(0, 15)
+            : "";
+
+        // Se não houver identificador completo, não desabilite CPF/CNS.
+        if (cpfEncontrado.length !== 11 && cnsEncontrado.length !== 15) {
+          router.push("/gestante/cadastrar");
+          setCarregando(false);
+          return;
+        }
+
+        // Verifica existência no portal (primeiro por CPF; se não tiver, por CNS).
+        if (cpfEncontrado.length === 11) {
+          const verificarCpfRes = await fetch(
+            `/api/gestante/verificar?cpf=${encodeURIComponent(cpfEncontrado)}`,
+          );
+          const verificarCpfData = await verificarCpfRes
+            .json()
+            .catch(() => ({}));
+          if (verificarCpfData?.existe) {
+            try {
+              sessionStorage.setItem(
+                "gestante_login_flash",
+                "Já existe um usuário com o CPF/CNS informado. Acesse sua conta",
+              );
+            } catch {}
+            router.push("/gestante/login");
+            setCarregando(false);
+            return;
+          }
+        } else if (cnsEncontrado.length === 15) {
+          const verificarCnsRes = await fetch(
+            `/api/gestante/verificar?cns=${encodeURIComponent(cnsEncontrado)}`,
+          );
+          const verificarCnsData = await verificarCnsRes
+            .json()
+            .catch(() => ({}));
+          if (verificarCnsData?.existe) {
+            try {
+              sessionStorage.setItem(
+                "gestante_login_flash",
+                "Já existe um usuário com o CPF/CNS informado. Acesse sua conta",
+              );
+            } catch {}
+            router.push("/gestante/login");
+            setCarregando(false);
+            return;
+          }
+        }
+
         router.push("/gestante/cadastrar?fromCns=1");
-      } else {
-        router.push("/gestante/cadastrar");
+        setCarregando(false);
+        return;
       }
+
+      router.push("/gestante/cadastrar");
     } catch {
       router.push("/gestante/cadastrar");
     }
@@ -211,6 +275,101 @@ export default function PesquisaCidadaoPage() {
     if (hasError) return;
     setCarregando(true);
     try {
+      // 1) Buscar na base federal (PEC/e-SUS) primeiro para pré-preencher os dados.
+      const nome = nomeCompletoAlt.trim();
+      const nomeMae = nomeMaeAlt.trim();
+      const dataNascimento = dataNascAlt.trim();
+
+      const qs = new URLSearchParams({
+        nome,
+        nomeMae: nomeMae || "",
+        dataNascimento: dataNascimento || "",
+      });
+
+      const buscaRes = await fetch(`/api/cns/buscar-por-dados?${qs.toString()}`);
+      const buscaData = await buscaRes.json().catch(() => ({}));
+
+      if (buscaRes.ok && buscaData?.sucesso && buscaData?.citizen) {
+        const citizen = buscaData.citizen as {
+          cpf?: string | null;
+          cns?: string | null;
+        };
+
+        const cpfEncontrado = citizen?.cpf
+          ? String(citizen.cpf).replace(/\D/g, "").slice(0, 11)
+          : "";
+        const cnsEncontrado = citizen?.cns
+          ? String(citizen.cns).replace(/\D/g, "").slice(0, 15)
+          : "";
+
+        // `fromCns=1` desabilita edição de CPF/CNS; então só usamos quando
+        // retornou ao menos um identificador válido.
+        if (cpfEncontrado.length !== 11 && cnsEncontrado.length !== 15) {
+          try {
+            sessionStorage.setItem(
+              "dadosPacienteBuscaAlt",
+              JSON.stringify({
+                nomeCompleto: nomeCompletoAlt.trim(),
+                nomeMae: nomeMaeAlt.trim() || undefined,
+                dataNascimento: dataNascAlt.trim() || undefined,
+              }),
+            );
+          } catch {}
+          router.push("/gestante/cadastrar?fromDados=1");
+          setCarregando(false);
+          return;
+        }
+
+        // 2) Se já existir usuário local (por CPF/CNS), direciona para login.
+        if (cpfEncontrado.length === 11) {
+          const verificarCpfRes = await fetch(
+            `/api/gestante/verificar?cpf=${encodeURIComponent(cpfEncontrado)}`,
+          );
+          const verificarCpfData = await verificarCpfRes
+            .json()
+            .catch(() => ({}));
+          if (verificarCpfData?.existe) {
+            try {
+              sessionStorage.setItem(
+                "gestante_login_flash",
+                "Já existe um usuário com o CPF/CNS informado. Acesse sua conta",
+              );
+            } catch {}
+            router.push("/gestante/login");
+            setCarregando(false);
+            return;
+          }
+        } else if (cnsEncontrado.length === 15) {
+          const verificarCnsRes = await fetch(
+            `/api/gestante/verificar?cns=${encodeURIComponent(cnsEncontrado)}`,
+          );
+          const verificarCnsData = await verificarCnsRes
+            .json()
+            .catch(() => ({}));
+          if (verificarCnsData?.existe) {
+            try {
+              sessionStorage.setItem(
+                "gestante_login_flash",
+                "Já existe um usuário com o CPF/CNS informado. Acesse sua conta",
+              );
+            } catch {}
+            router.push("/gestante/login");
+            setCarregando(false);
+            return;
+          }
+        }
+
+        // 3) Caso não exista no portal, encaminha para o cadastro pré-preenchido.
+        try {
+          sessionStorage.setItem("cnsPaciente", JSON.stringify(citizen));
+        } catch {}
+        router.push("/gestante/cadastrar?fromCns=1");
+        setCarregando(false);
+        return;
+      }
+
+      // 4) Fallback: busca local para evitar duplicidade e, se não existir, cadastra manualmente
+      // com os dados fornecidos no formulário.
       const verificarRes = await fetch("/api/gestante/verificar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -350,7 +509,7 @@ export default function PesquisaCidadaoPage() {
                 htmlFor="nao-possui"
                 className="cursor-pointer text-sm font-normal"
               >
-                Não Possui (CPF)
+                não sabe/não possui (CPF)
               </Label>
             </div>
 
@@ -376,7 +535,7 @@ export default function PesquisaCidadaoPage() {
                       onChange={() => setBuscaAlternativa("dados")}
                       className="rounded-full"
                     />
-                    <span className="text-sm">Dados do Paciente</span>
+                    <span className="text-sm">Dados do Cidadão(ã)</span>
                   </label>
                 </div>
 
@@ -424,7 +583,8 @@ export default function PesquisaCidadaoPage() {
                         placeholder="Até 70 caracteres"
                         value={nomeCompletoAlt}
                         onChange={(e) => {
-                          setNomeCompletoAlt(e.target.value.slice(0, 70));
+                          const v = e.target.value.replace(/\s{2,}/g, " ").slice(0, 70);
+                          setNomeCompletoAlt(v);
                           setErroNomeCompleto("");
                         }}
                         className={erroNomeCompleto ? "border-destructive" : ""}
@@ -443,7 +603,8 @@ export default function PesquisaCidadaoPage() {
                         placeholder="Até 70 caracteres"
                         value={nomeMaeAlt}
                         onChange={(e) => {
-                          setNomeMaeAlt(e.target.value.slice(0, 70));
+                          const v = e.target.value.replace(/\s{2,}/g, " ").slice(0, 70);
+                          setNomeMaeAlt(v);
                           setErroNomeMae("");
                         }}
                         className={erroNomeMae ? "border-destructive" : ""}

@@ -124,6 +124,12 @@ export function validarStep1(form: FormCadastroGestante): boolean {
   const cnsDigits = onlyDigits(form.cns, 15);
   const temCpfOuCns = cpfDigits.length === 11 || cnsDigits.length === 15;
   if (!temCpfOuCns) return false;
+  // Mesmo quando CPF ou CNS não são obrigatórios, se o usuário digitar
+  // parte do número devemos exigir preenchimento completo para evitar
+  // gravar dados incorretos (ex.: 10 dígitos no CPF).
+  if (cpfDigits.length > 0 && cpfDigits.length !== 11) return false;
+  if (cnsDigits.length > 0 && cnsDigits.length !== 15) return false;
+
   if (cpfDigits.length === 11 && validarCPF(form.cpf)) return false;
   if (cnsDigits.length === 15 && validarCNS(form.cns)) return false;
   if (!form.nomeCompleto.trim() || form.nomeCompleto.trim().length > 70) return false;
@@ -173,11 +179,29 @@ export function validarStep4(form: FormCadastroGestante): boolean {
 }
 
 /** Retorna erros inline para exibição nos campos (step 1). */
-export function getErrosStep1(form: FormCadastroGestante): { cpf?: string; cns?: string; nomeCompleto?: string; dataNascimento?: string } {
+export function getErrosStep1(
+  form: FormCadastroGestante,
+): {
+  cpf?: string;
+  cns?: string;
+  nomeCompleto?: string;
+  nomeSocial?: string;
+  nomeMae?: string;
+  nomePai?: string;
+  dataNascimento?: string;
+} {
   const cpfDigits = onlyDigits(form.cpf, 11);
   const cnsDigits = onlyDigits(form.cns, 15);
   const cpfValido = cpfDigits.length === 11 ? validarCPF(form.cpf) : null;
   const cnsValido = cnsDigits.length === 15 ? validarCNS(form.cns) : null;
+  const cpfIncompleto =
+    cpfDigits.length > 0 && cpfDigits.length !== 11
+      ? "CPF deve conter 11 dígitos."
+      : null;
+  const cnsIncompleto =
+    cnsDigits.length > 0 && cnsDigits.length !== 15
+      ? "CNS deve conter 15 dígitos."
+      : null;
   const dataNascValida = (() => {
     const d = form.dataNascimento.trim();
     if (!d || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
@@ -186,10 +210,29 @@ export function getErrosStep1(form: FormCadastroGestante): { cpf?: string; cns?:
     return age != null && age >= 9 && age <= 60;
   })();
   return {
-    cpf: cpfDigits.length === 11 && cpfValido ? cpfValido : undefined,
-    cns: cnsDigits.length === 15 && cnsValido ? cnsValido : undefined,
+    cpf: cpfIncompleto ?? (cpfDigits.length === 11 && cpfValido ? cpfValido : undefined),
+    cns: cnsIncompleto ?? (cnsDigits.length === 15 && cnsValido ? cnsValido : undefined),
     nomeCompleto: form.nomeCompleto.trim() && !caracteresNomeValidos(form.nomeCompleto) ? "Existem caracteres inválidos" : undefined,
-    dataNascimento: form.dataNascimento.trim() && !dataNascValida ? "Idade deve estar entre 9 e 60 anos" : undefined,
+    nomeSocial:
+      form.nomeSocial.trim() && !caracteresNomeValidos(form.nomeSocial)
+        ? "Existem caracteres inválidos"
+        : undefined,
+    nomeMae:
+      !form.nomeMaeIgnorada &&
+      form.nomeMae.trim() &&
+      !caracteresNomeValidos(form.nomeMae)
+        ? "Existem caracteres inválidos"
+        : undefined,
+    nomePai:
+      !form.nomePaiIgnorado &&
+      form.nomePai.trim() &&
+      !caracteresNomeValidos(form.nomePai)
+        ? "Existem caracteres inválidos"
+        : undefined,
+    dataNascimento:
+      form.dataNascimento.trim() && !dataNascValida
+        ? "idade permitida: de 9 a 60 anos"
+        : undefined,
   };
 }
 
@@ -222,6 +265,8 @@ export function getFaltando(etapa: 1 | 2 | 3 | 4, form: FormCadastroGestante): s
   const senhaConfirmaTrim = form.senhaConfirma.trim();
 
   if (etapa === 1) {
+    if (cpfDigits.length > 0 && cpfDigits.length !== 11) faltando.push("CPF (11 dígitos)");
+    if (cnsDigits.length > 0 && cnsDigits.length !== 15) faltando.push("CNS (15 dígitos)");
     if (!temCpfOuCns) faltando.push("CPF (11 dígitos) ou CNS (15 dígitos)");
     else if (cpfDigits.length === 11 && cpfValido) faltando.push("CPF inválido");
     else if (cnsDigits.length === 15 && cnsValido) faltando.push("CNS inválido");
@@ -233,7 +278,14 @@ export function getFaltando(etapa: 1 | 2 | 3 | 4, form: FormCadastroGestante): s
     if (form.dataNascimento.trim() && !dataNascValida) faltando.push("Data inválida");
     if (!form.racaCor.trim()) faltando.push("Raça/Cor");
     if (!form.sexo.trim()) faltando.push("Sexo");
-    if (form.possuiDeficiencia && !form.deficienciaTipos.length && !form.deficiencia.trim()) faltando.push("Deficiência (selecione ao menos um tipo)");
+    if (form.possuiDeficiencia == null) faltando.push("Possui Deficiência");
+    if (
+      form.possuiDeficiencia === true &&
+      !form.deficienciaTipos.length &&
+      !form.deficiencia.trim()
+    ) {
+      faltando.push("Deficiência (selecione ao menos um tipo)");
+    }
   }
   if (etapa === 2) {
     if (!temCelularOuResidencial) faltando.push("Telefone Celular Principal ou Telefone Residencial (DDD + número)");

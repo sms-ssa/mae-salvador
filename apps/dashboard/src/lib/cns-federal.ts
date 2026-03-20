@@ -122,9 +122,33 @@ function parsePacienteFromBody(bodyXml: string): PacienteBaseFederal {
       ? dataNasc.slice(0, 10)
       : dataNasc.slice(0, 10)
     : null;
+
+  const cnsValor = get(
+    "cns",
+    "CNS",
+    "nu_cns",
+    "nuCns",
+    "nuCNS",
+    "nu_cns",
+    "numeroCns",
+    "numeroCns",
+    "numero_cns",
+    "numeroCNS",
+    "numero_c_n_s",
+    "numero_cns",
+    "numCns",
+    "num_cns",
+    "NuCns",
+    "NuCNS",
+    "numcns",
+  );
+  const cnsFinal =
+    cnsValor && cnsValor.trim() && cnsValor.trim() !== "-3"
+      ? cnsValor
+      : null;
   return {
     cpf: get("cpf", "CPF") ?? undefined,
-    cns: get("cns", "CNS", "nu_cns", "numeroCns", "NuCns") ?? undefined,
+    cns: cnsFinal ?? undefined,
     nome: get("nome", "Nome", "nomePaciente") ?? undefined,
     nomeMae: get("nomeMae", "NomeMae", "nome_mae") ?? undefined,
     nomePai: get("nomePai", "NomePai", "nome_pai") ?? undefined,

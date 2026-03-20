@@ -44,9 +44,6 @@ export default function LoginPage() {
           <h1 className="text-2xl font-bold text-white tracking-tight">
             Programa Mãe Salvador
           </h1>
-          <p className="text-sm text-white/50 mt-1">
-            SMS &mdash; Caderneta Digital
-          </p>
         </div>
 
         {/* Perfil de Acesso (requisitos: quadro "Perfil de Acesso") */}
