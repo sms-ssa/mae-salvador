@@ -96,7 +96,11 @@ function parseSoapFault(xml: string): string | null {
 }
 
 function parsePacienteFromBody(bodyXml: string): PacienteBaseFederal {
-  const raw: Record<string, string> = {};
+  // Importante: o SOAP pode repetir tags com o mesmo nome (ex.: <numero> para
+  // endereço e também <numero> para CNS). O parser atual sobrescrevia o
+  // valor e perdia o "CNS número definitivo". Por isso guardamos todas
+  // as ocorrências.
+  const raw: Record<string, string[]> = {};
   const tagRegex = /<([^>\s/]+)[^>]*>([^<]*)<\/\1>/g;
   let m: RegExpExecArray | null;
   while ((m = tagRegex.exec(bodyXml)) !== null) {
@@ -106,15 +110,29 @@ function parsePacienteFromBody(bodyXml: string): PacienteBaseFederal {
       .toLowerCase()
       .replace(/^_/, "");
     const trimmed = value.trim();
-    raw[tag] = trimmed;
-    raw[key] = trimmed;
+    if (!raw[tag]) raw[tag] = [];
+    if (!raw[key]) raw[key] = [];
+    raw[tag].push(trimmed);
+    raw[key].push(trimmed);
   }
   const get = (...keys: string[]): string | null => {
     for (const k of keys) {
-      const v = raw[k];
+      const values = raw[k];
+      const v = values?.find((x) => x != null && x !== "");
       if (v != null && v !== "") return v;
     }
     return null;
+  };
+  const getAll = (...keys: string[]): string[] => {
+    const out: string[] = [];
+    for (const k of keys) {
+      const values = raw[k];
+      if (!values) continue;
+      for (const v of values) {
+        if (v != null && v !== "") out.push(v);
+      }
+    }
+    return out;
   };
   const dataNasc = get("dataNascimento", "DataNascimento", "data_nascimento");
   const dataNascNorm = dataNasc
@@ -123,7 +141,7 @@ function parsePacienteFromBody(bodyXml: string): PacienteBaseFederal {
       : dataNasc.slice(0, 10)
     : null;
 
-  const cnsValor = get(
+  const cnsCandidates = getAll(
     "cns",
     "CNS",
     "nu_cns",
@@ -141,11 +159,23 @@ function parsePacienteFromBody(bodyXml: string): PacienteBaseFederal {
     "NuCns",
     "NuCNS",
     "numcns",
-  );
+    // Fallback: em algumas respostas o CNS número e tipo vêm como tags genéricas.
+    "numero",
+    "tipo",
+  )
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .filter((s) => s !== "-3");
+
+  // Seleciona o "CNS número definitivo" como o candidato que vira 15 dígitos.
+  const cnsValor =
+    cnsCandidates.find((v) => v.replace(/\D/g, "").length === 15) ??
+    cnsCandidates[0] ??
+    null;
+
   const cnsFinal =
-    cnsValor && cnsValor.trim() && cnsValor.trim() !== "-3"
-      ? cnsValor
-      : null;
+    cnsValor && cnsValor.trim() && cnsValor.trim() !== "-3" ? cnsValor : null;
+
   return {
     cpf: get("cpf", "CPF") ?? undefined,
     cns: cnsFinal ?? undefined,

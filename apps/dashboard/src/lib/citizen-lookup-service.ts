@@ -26,12 +26,14 @@ export async function getCitizenByCpfOrCns(
   let citizen: CitizenDto | null = null;
   try {
     citizen = await esusCitizenProvider.getCitizenByCpfOrCns(document);
+    console.log("citizen e-SUS: ", citizen);
     if (citizen != null) {
       return citizen;
     }
   } catch {}
   try {
     citizen = await soapCitizenProvider.getCitizenByCpfOrCns(document);
+    console.log("citizen SOAP: ", citizen);
     if (citizen != null) {
       return citizen;
     }

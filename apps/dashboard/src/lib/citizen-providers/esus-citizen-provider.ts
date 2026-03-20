@@ -137,12 +137,7 @@ export const esusCitizenProvider: ICitizenProvider = {
         municipio: trim(get("municipio")) ?? undefined,
       };
       return dto;
-    } catch (e) {
-      console.error("[e-SUS] Falha ao consultar tb_cidadao", {
-        document,
-        doc,
-        error: e instanceof Error ? e.message : String(e),
-      });
+    } catch {
       return null;
     }
   },
