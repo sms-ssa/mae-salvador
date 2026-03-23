@@ -39,6 +39,43 @@ function normalizarCpf(cpf: string): string {
 
 const CNS_NAMESPACE = "http://servicos.nti.sms.salvador.ba.br/";
 
+type RacaCorSoapCodigo = "01" | "02" | "03" | "04" | "05" | "99";
+
+const RACA_COR_SOAP_MAP: Record<RacaCorSoapCodigo, string> = {
+  "01": "BRANCA",
+  "02": "PRETA",
+  "03": "PARDA",
+  "04": "AMARELA",
+  "05": "INDIGENA",
+  "99": "SEM INFORMACAO",
+};
+
+function normalizarRacaCorSoap(valor: string | null): string | undefined {
+  if (!valor) return undefined;
+  const v = valor.trim();
+  if (!v) return undefined;
+
+  // Aceita código "1" ou "01".
+  const digits = v.replace(/\D/g, "");
+  const codigo = digits.length === 1 ? `0${digits}` : digits.slice(0, 2);
+  if (codigo in RACA_COR_SOAP_MAP) {
+    return RACA_COR_SOAP_MAP[codigo as RacaCorSoapCodigo];
+  }
+
+  // Se já vier descritivo, normaliza para o padrão do formulário.
+  const norm = v
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (norm.includes("BRANCA")) return "BRANCA";
+  if (norm.includes("PRETA")) return "PRETA";
+  if (norm.includes("PARDA")) return "PARDA";
+  if (norm.includes("AMARELA")) return "AMARELA";
+  if (norm.includes("INDIGENA")) return "INDIGENA";
+  if (norm.includes("SEM INFORMACAO")) return "SEM INFORMACAO";
+  return undefined;
+}
+
 function normalizarCns(cns: string): string {
   return (cns ?? "").replace(/\D/g, "").slice(0, 15);
 }
@@ -134,6 +171,32 @@ function parsePacienteFromBody(bodyXml: string): PacienteBaseFederal {
     }
     return out;
   };
+
+  const extractBlocks = (xml: string, tagName: string): string[] => {
+    const re = new RegExp(
+      `<(?:\\w+:)?${tagName}\\b[^>]*>([\\s\\S]*?)<\\/(?:\\w+:)?${tagName}>`,
+      "gi",
+    );
+    const out: string[] = [];
+    let mm: RegExpExecArray | null;
+    while ((mm = re.exec(xml)) !== null) {
+      out.push(mm[1]);
+    }
+    return out;
+  };
+
+  const firstTagValue = (xml: string, ...tags: string[]): string | null => {
+    for (const t of tags) {
+      const re = new RegExp(
+        `<(?:\\w+:)?${t}\\b[^>]*>([^<]*)<\\/(?:\\w+:)?${t}>`,
+        "i",
+      );
+      const m = xml.match(re);
+      const v = m?.[1]?.trim();
+      if (v) return v;
+    }
+    return null;
+  };
   const dataNasc = get("dataNascimento", "DataNascimento", "data_nascimento");
   const dataNascNorm = dataNasc
     ? dataNasc.includes("T")
@@ -141,40 +204,129 @@ function parsePacienteFromBody(bodyXml: string): PacienteBaseFederal {
       : dataNasc.slice(0, 10)
     : null;
 
+  // --- CNS (prioriza blocos <cns><numero>...</numero><tipo>...</tipo></cns>) ---
+  const cnsBlocks = extractBlocks(bodyXml, "cns");
+  const cnsEntries = cnsBlocks.map((b) => ({
+    numero: firstTagValue(b, "numero"),
+    tipo: firstTagValue(b, "tipo"),
+  }));
+  const cnsDefinitivo =
+    cnsEntries.find((e) => {
+      const num = (e.numero ?? "").replace(/\D/g, "");
+      const tipo = (e.tipo ?? "")
+        .toUpperCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+      return (
+        num.length === 15 &&
+        (tipo.includes("DEFINIT") || tipo.includes("DEFINIT"))
+      );
+    }) ??
+    cnsEntries.find((e) => (e.numero ?? "").replace(/\D/g, "").length === 15) ??
+    null;
+
   const cnsCandidates = getAll(
     "cns",
     "CNS",
     "nu_cns",
     "nuCns",
     "nuCNS",
-    "nu_cns",
-    "numeroCns",
     "numeroCns",
     "numero_cns",
     "numeroCNS",
-    "numero_c_n_s",
-    "numero_cns",
     "numCns",
     "num_cns",
     "NuCns",
     "NuCNS",
     "numcns",
-    // Fallback: em algumas respostas o CNS número e tipo vêm como tags genéricas.
-    "numero",
-    "tipo",
-  )
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .filter((s) => s !== "-3");
-
-  // Seleciona o "CNS número definitivo" como o candidato que vira 15 dígitos.
+  );
   const cnsValor =
+    cnsDefinitivo?.numero ??
     cnsCandidates.find((v) => v.replace(/\D/g, "").length === 15) ??
-    cnsCandidates[0] ??
+    null;
+  const cnsFinal = cnsValor && cnsValor.trim() !== "-3" ? cnsValor : null;
+
+  // --- Endereço (prioriza bloco <endereco>) ---
+  const enderecoBlocks = extractBlocks(bodyXml, "endereco");
+  const endereco = enderecoBlocks.length > 0 ? enderecoBlocks[0] : null;
+  const numeroEndereco = endereco ? firstTagValue(endereco, "numero") : null;
+  const logradouroEndereco = endereco
+    ? firstTagValue(endereco, "logradouro")
+    : null;
+  const bairroEndereco = endereco ? firstTagValue(endereco, "bairro") : null;
+  const complementoEndereco = endereco
+    ? firstTagValue(endereco, "complemento")
+    : null;
+  const cepEndereco = endereco ? firstTagValue(endereco, "cep") : null;
+
+  // --- Telefones (prioriza blocos <telefones>) ---
+  const telefoneBlocks = extractBlocks(bodyXml, "telefones");
+  const telefones = telefoneBlocks
+    .map((b) => ({
+      ddd: firstTagValue(b, "ddd"),
+      numero: firstTagValue(b, "numero"),
+      tipo: firstTagValue(b, "tipo"),
+    }))
+    .filter((t) => !!(t.numero && t.numero.trim() && t.numero.trim() !== "-3"));
+
+  const celularFromLista =
+    telefones.find((t) => {
+      const tipo = (t.tipo ?? "")
+        .toUpperCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+      return tipo.includes("CEL");
+    }) ??
+    telefones.find((t) => (t.numero ?? "").replace(/\D/g, "").length === 9) ??
     null;
 
-  const cnsFinal =
-    cnsValor && cnsValor.trim() && cnsValor.trim() !== "-3" ? cnsValor : null;
+  const residencialFromLista =
+    telefones.find((t) => {
+      const tipo = (t.tipo ?? "")
+        .toUpperCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+      return tipo.includes("RES");
+    }) ??
+    telefones.find((t) => (t.numero ?? "").replace(/\D/g, "").length === 8) ??
+    null;
+
+  const montarTelefone = (t: { ddd: string | null; numero: string | null } | null): string | null => {
+    if (!t?.numero) return null;
+    const num = t.numero.replace(/\D/g, "");
+    const ddd = (t.ddd ?? "").replace(/\D/g, "");
+    if (!num) return null;
+    if (ddd && (num.length === 8 || num.length === 9)) return `${ddd}${num}`;
+    return num;
+  };
+
+  const telefoneCelularRaw = montarTelefone(celularFromLista) ?? get(
+    "telefoneCelular",
+    "TelefoneCelular",
+    "telefone_celular",
+    "nuTelefoneCelular",
+    "nu_telefone_celular",
+    "celular",
+    "phone",
+    "foneCelular",
+    "fone_celular",
+  );
+  const telefoneResidencialRaw = montarTelefone(residencialFromLista) ?? get(
+    "telefoneResidencial",
+    "TelefoneResidencial",
+    "telefone_residencial",
+    "nuTelefoneResidencial",
+    "nu_telefone_residencial",
+    "foneResidencial",
+    "fone_residencial",
+  );
+
+  const telefoneCelular =
+    telefoneCelularRaw && telefoneCelularRaw.trim() !== "-3" ? telefoneCelularRaw : null;
+  const telefoneResidencial =
+    telefoneResidencialRaw && telefoneResidencialRaw.trim() !== "-3"
+      ? telefoneResidencialRaw
+      : null;
 
   return {
     cpf: get("cpf", "CPF") ?? undefined,
@@ -184,13 +336,18 @@ function parsePacienteFromBody(bodyXml: string): PacienteBaseFederal {
     nomePai: get("nomePai", "NomePai", "nome_pai") ?? undefined,
     dataNascimento: (dataNascNorm ?? dataNasc) ?? undefined,
     sexo: get("sexo", "Sexo") ?? undefined,
-    logradouro: get("logradouro", "Logradouro") ?? undefined,
-    numero: get("numero", "Numero") ?? undefined,
-    complemento: get("complemento", "Complemento") ?? undefined,
-    bairro: get("bairro", "Bairro") ?? undefined,
-    cep: get("cep", "Cep", "CEP") ?? undefined,
+    racaCor: normalizarRacaCorSoap(
+      get("racaCor", "RacaCor", "raca_cor", "codigoRacaCor", "codigo_raca_cor"),
+    ),
+    logradouro: logradouroEndereco ?? get("logradouro", "Logradouro") ?? undefined,
+    numero: numeroEndereco ?? undefined,
+    complemento: complementoEndereco ?? get("complemento", "Complemento") ?? undefined,
+    bairro: bairroEndereco ?? get("bairro", "Bairro") ?? undefined,
+    cep: cepEndereco ?? get("cep", "Cep", "CEP") ?? undefined,
     emails: get("emails", "Emails") ?? undefined,
     ddd: get("ddd", "DDD") ?? undefined,
+    telefoneCelular: telefoneCelular ?? undefined,
+    telefoneResidencial: telefoneResidencial ?? undefined,
   };
 }
 

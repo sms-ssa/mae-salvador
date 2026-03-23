@@ -43,6 +43,18 @@ export function StepSenha({ form, updateField, erroSenha }: StepSenhaProps) {
             onChange={(e) => updateField("senhaConfirma", e.target.value.slice(0, 15))}
           />
         </div>
+        <label className="flex items-start gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={form.declaracaoCiencia}
+            onChange={(e) => updateField("declaracaoCiencia", e.target.checked)}
+            className="mt-1 rounded border-input"
+          />
+          <span className="text-sm">
+            Declaro ciência e concordância com as informações prestadas neste cadastro.
+            <span className="text-red-500"> *</span>
+          </span>
+        </label>
         {erroSenha && (
           <p className="text-sm text-destructive">{erroSenha}</p>
         )}

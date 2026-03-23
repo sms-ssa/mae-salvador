@@ -10,7 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import type { FormCadastroGestante } from "../validators/validacoesCadastroGestante";
 
@@ -59,9 +58,14 @@ export function StepGestacaoPerfil({ form, updateField, erroDum }: StepGestacaoP
             </div>
           </div>
 
-          <Separator />
+        </CardContent>
+      </Card>
 
-          <p className="text-sm font-medium text-foreground">Perfil social</p>
+      <Card className="bg-muted/30 border-0 shadow-none">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">Perfil Social e Assistencial</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Programa social <span className="text-red-500">*</span></Label>
@@ -179,7 +183,7 @@ export function StepGestacaoPerfil({ form, updateField, erroDum }: StepGestacaoP
       <Card className="bg-muted/30 border-0 shadow-none">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
-            <CardTitle className="text-sm">Antecedentes</CardTitle>
+            <CardTitle className="text-sm">Antecedentes Obstétricos</CardTitle>
             <Badge variant="outline" className="text-[10px] font-normal">Facultativo</Badge>
           </div>
         </CardHeader>

@@ -100,6 +100,7 @@ export interface FormCadastroGestante {
   medicacoesEmUso: string;
   senha: string;
   senhaConfirma: string;
+  declaracaoCiencia: boolean;
 }
 
 function onlyDigits(s: string, max: number): string {
@@ -144,22 +145,30 @@ export function validarStep1(form: FormCadastroGestante): boolean {
   if (age == null || age < 9 || age > 60) return false;
   if (!form.racaCor.trim() || !form.sexo.trim()) return false;
   if (form.possuiDeficiencia == null) return false;
-  if (form.possuiDeficiencia && !form.deficienciaTipos.length && !form.deficiencia.trim()) return false;
+  if (form.possuiDeficiencia && !form.deficienciaTipos.length) return false;
   return true;
 }
 
 export function validarStep2(form: FormCadastroGestante): boolean {
   const dddDig = onlyDigits(form.ddd, 2);
   const celDig = onlyDigits(form.celularPrincipal, 9);
+  const dddAltDig = onlyDigits(form.dddAlternativo, 2);
+  const celAltDig = onlyDigits(form.celularAlternativo, 9);
   const dddResDig = onlyDigits(form.dddResidencial, 2);
   const residencialDig = onlyDigits(form.telefoneResidencial, 8);
+  if ((dddDig.length > 0 && dddDig.length !== 2) || (celDig.length > 0 && celDig.length !== 9)) return false;
+  if ((dddAltDig.length > 0 && dddAltDig.length !== 2) || (celAltDig.length > 0 && celAltDig.length !== 9)) return false;
+  if ((dddResDig.length > 0 && dddResDig.length !== 2) || (residencialDig.length > 0 && residencialDig.length !== 8)) return false;
   const telefonePrincipalOk = dddDig.length === 2 && celDig.length === 9 && celDig[0] === "9";
+  const telefoneAlternativoOk = dddAltDig.length === 2 && celAltDig.length === 9 && celAltDig[0] === "9";
   const telefoneResidencialOk = dddResDig.length === 2 && residencialDig.length === 8 && /^[2-5]/.test(residencialDig);
   if (!telefonePrincipalOk && !telefoneResidencialOk) return false;
-  if (form.email.trim() && (!form.email.includes("@") || !form.email.includes("."))) return false;
+  if (form.temWhatsapp && !telefonePrincipalOk) return false;
+  if (form.temWhatsappAlternativo && !telefoneAlternativoOk) return false;
+  if (form.email.trim() && (form.email.length > 100 || !form.email.includes("@") || !form.email.includes("."))) return false;
   if (onlyDigits(form.cep, 8).length !== 8) return false;
   if (!form.logradouro.trim() || !form.bairro.trim() || !form.municipio.trim() || !form.tipoLogradouro.trim()) return false;
-  if (!form.numeroSemNumero && !form.numero.trim()) return false;
+  if (!form.numeroSemNumero && (!form.numero.trim() || onlyDigits(form.numero, 7).length === 0)) return false;
   return true;
 }
 
@@ -175,7 +184,7 @@ export function validarStep3(form: FormCadastroGestante): boolean {
 export function validarStep4(form: FormCadastroGestante): boolean {
   const s = form.senha.trim();
   const c = form.senhaConfirma.trim();
-  return s.length >= 6 && s.length <= 15 && s === c;
+  return s.length >= 6 && s.length <= 15 && s === c && form.declaracaoCiencia === true;
 }
 
 /** Retorna erros inline para exibição nos campos (step 1). */
@@ -252,12 +261,17 @@ export function getFaltando(etapa: 1 | 2 | 3 | 4, form: FormCadastroGestante): s
   })();
   const dddDig = onlyDigits(form.ddd, 2);
   const celDig = onlyDigits(form.celularPrincipal, 9);
+  const dddAltDig = onlyDigits(form.dddAlternativo, 2);
+  const celAltDig = onlyDigits(form.celularAlternativo, 9);
   const dddResDig = onlyDigits(form.dddResidencial, 2);
   const residencialDig = onlyDigits(form.telefoneResidencial, 8);
   const telefonePrincipalOk = dddDig.length === 2 && celDig.length === 9 && celDig[0] === "9";
+  const telefoneAlternativoOk = dddAltDig.length === 2 && celAltDig.length === 9 && celAltDig[0] === "9";
   const telefoneResidencialOk = dddResDig.length === 2 && residencialDig.length === 8 && /^[2-5]/.test(residencialDig);
   const temCelularOuResidencial = telefonePrincipalOk || telefoneResidencialOk;
-  const emailOk = !form.email.trim() || (form.email.includes("@") && form.email.includes("."));
+  const emailOk =
+    !form.email.trim() ||
+    (form.email.length <= 100 && form.email.includes("@") && form.email.includes("."));
   const dumOk = !form.dum.trim() || validarDum(form.dum) === null;
   const nisDig = onlyDigits(form.nis, 11);
   const nisOk = !form.programaSocial.includes("bolsa-familia") || nisDig.length === 11;
@@ -281,25 +295,33 @@ export function getFaltando(etapa: 1 | 2 | 3 | 4, form: FormCadastroGestante): s
     if (form.possuiDeficiencia == null) faltando.push("Possui Deficiência");
     if (
       form.possuiDeficiencia === true &&
-      !form.deficienciaTipos.length &&
-      !form.deficiencia.trim()
+      !form.deficienciaTipos.length
     ) {
       faltando.push("Deficiência (selecione ao menos um tipo)");
     }
   }
   if (etapa === 2) {
+    if (dddDig.length > 0 && dddDig.length !== 2) faltando.push("DDD principal (2 dígitos)");
+    if (celDig.length > 0 && celDig.length !== 9) faltando.push("Celular principal (9 dígitos)");
+    if (dddAltDig.length > 0 && dddAltDig.length !== 2) faltando.push("DDD alternativo (2 dígitos)");
+    if (celAltDig.length > 0 && celAltDig.length !== 9) faltando.push("Celular alternativo (9 dígitos)");
+    if (dddResDig.length > 0 && dddResDig.length !== 2) faltando.push("DDD residencial (2 dígitos)");
+    if (residencialDig.length > 0 && residencialDig.length !== 8) faltando.push("Telefone residencial (8 dígitos)");
     if (!temCelularOuResidencial) faltando.push("Telefone Celular Principal ou Telefone Residencial (DDD + número)");
-    if (!emailOk) faltando.push("E-mail válido (com @ e ponto) ou deixe em branco");
+    if (form.temWhatsapp && !telefonePrincipalOk) faltando.push("WhatsApp principal exige DDD + celular principal válidos");
+    if (form.temWhatsappAlternativo && !telefoneAlternativoOk) faltando.push("WhatsApp alternativo exige DDD + celular alternativo válidos");
+    if (!emailOk) faltando.push("E-mail inválido");
     if (onlyDigits(form.cep, 8).length !== 8) faltando.push("CEP (8 dígitos)");
     if (!form.logradouro.trim()) faltando.push("Nome do Logradouro");
     if (!form.numeroSemNumero && !form.numero.trim()) faltando.push("Número (ou marque S/N)");
+    if (!form.numeroSemNumero && form.numero.trim() && !/^\d{1,7}$/.test(form.numero.trim())) faltando.push("Número (somente dígitos, até 7)");
     if (!form.bairro.trim()) faltando.push("Bairro");
     if (!form.municipio.trim()) faltando.push("Município de Residência");
     if (!form.tipoLogradouro.trim()) faltando.push("Tipo de Logradouro");
   }
   if (etapa === 3) {
     if (!form.descobrimento) faltando.push("Como descobriu a gestação");
-    if (!form.programaSocial) faltando.push("Programa social");
+    if (!Array.isArray(form.programaSocial) || form.programaSocial.length === 0) faltando.push("Programa social");
     if (!nisOk) faltando.push("NIS (11 dígitos, obrigatório para Bolsa Família)");
     if (!dumOk) faltando.push("DUM inválida (entre 7 e 294 dias atrás)");
   }
@@ -308,6 +330,7 @@ export function getFaltando(etapa: 1 | 2 | 3 | 4, form: FormCadastroGestante): s
     if (senhaTrim !== senhaConfirmaTrim && senhaConfirmaTrim) faltando.push("As senhas não coincidem");
     if (!senhaTrim) faltando.push("Crie uma senha");
     if (!senhaConfirmaTrim) faltando.push("Confirme a senha");
+    if (!form.declaracaoCiencia) faltando.push("Declaração de ciência");
   }
   return faltando;
 }

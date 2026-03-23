@@ -257,6 +257,7 @@ const INITIAL_FORM: FormCadastroGestante = {
   medicacoesEmUso: "",
   senha: "",
   senhaConfirma: "",
+  declaracaoCiencia: false,
 };
 
 export type ConfirmacaoData =
@@ -308,6 +309,12 @@ export function useCadastroGestante() {
         if (key === "possuiDeficiencia" && value !== true) {
           next.deficienciaTipos = [];
           next.deficiencia = "";
+        }
+        if (key === "cep") {
+          next.municipio = "";
+          next.tipoLogradouro = "";
+          next.logradouro = "";
+          next.bairro = "";
         }
         return next;
       });
@@ -412,6 +419,7 @@ export function useCadastroGestante() {
             (dados.numero?.toUpperCase() === "S/N" || dados.numero === "s/n")
           ),
           complemento: dados.complemento ?? prev.complemento,
+          pontoReferencia: dados.complemento ?? prev.pontoReferencia,
           bairro: dados.bairro ?? prev.bairro,
           cep: dados.cep ? formatCepValue(dados.cep) : prev.cep,
           municipio:
@@ -578,11 +586,8 @@ export function useCadastroGestante() {
       const cnsDig = form.cns.replace(/\D/g, "").slice(0, 15);
       const cepDigits = form.cep.replace(/\D/g, "").slice(0, 8);
       const deficienciaVal =
-        form.possuiDeficiencia &&
-        (form.deficienciaTipos.length > 0 || form.deficiencia.trim())
-          ? [...form.deficienciaTipos, form.deficiencia.trim()]
-              .filter(Boolean)
-              .join("; ")
+        form.possuiDeficiencia && form.deficienciaTipos.length > 0
+          ? form.deficienciaTipos.join("; ")
           : undefined;
       const dddP = form.ddd.replace(/\D/g, "").slice(0, 2);
       const celP = form.celularPrincipal.replace(/\D/g, "").slice(0, 9);

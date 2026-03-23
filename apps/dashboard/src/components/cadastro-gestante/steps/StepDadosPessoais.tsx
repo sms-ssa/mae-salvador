@@ -179,7 +179,11 @@ export function StepDadosPessoais({
             }
           />
           <p className="text-xs text-muted-foreground">
-            Opcional. Informe apenas se desejar usar seu nome social no acesso.
+            Este campo é destinado a pessoas trans, travestis e demais pessoas de
+            outros grupos que utilizam Nome Social, conforme a Lei Municipal nº
+            7859/2010. Caso deseje ser identificado(a) pelo seu nome social,
+            preencha este campo com o nome escolhido e selecione a opção
+            principal.
           </p>
           {erros.nomeSocial && (
             <p className="text-sm text-destructive">{erros.nomeSocial}</p>
@@ -370,12 +374,6 @@ export function StepDadosPessoais({
                   </label>
                 ))}
               </div>
-              <Input
-                placeholder="Outras (descreva se necessário)"
-                value={form.deficiencia}
-                onChange={(e) => updateField("deficiencia", e.target.value)}
-                className="mt-1"
-              />
             </div>
           )}
         </div>

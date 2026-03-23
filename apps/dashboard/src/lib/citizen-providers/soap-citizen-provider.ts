@@ -33,6 +33,7 @@ function pacienteToCitizenDto(p: {
   nomePai?: string | null;
   dataNascimento?: string | null;
   sexo?: string | null;
+  racaCor?: string | null;
   logradouro?: string | null;
   numero?: string | null;
   complemento?: string | null;
@@ -40,7 +41,26 @@ function pacienteToCitizenDto(p: {
   cep?: string | null;
   emails?: string | null;
   ddd?: string | null;
+  telefoneCelular?: string | null;
+  telefoneResidencial?: string | null;
 }): CitizenDto {
+  const ddd = trim(p.ddd) ?? undefined;
+  const celRaw = trim(p.telefoneCelular) ?? undefined;
+  const resRaw = trim(p.telefoneResidencial) ?? undefined;
+  const celularNormalizado = (() => {
+    if (!celRaw) return undefined;
+    const celDigits = celRaw.replace(/\D/g, "");
+    const dddDigits = (ddd ?? "").replace(/\D/g, "");
+    if (!celDigits) return undefined;
+    if (dddDigits && celDigits.length <= 9) return `${dddDigits}${celDigits}`;
+    return celDigits;
+  })();
+  const residencialNormalizado = (() => {
+    if (!resRaw) return undefined;
+    const resDigits = resRaw.replace(/\D/g, "");
+    return resDigits || undefined;
+  })();
+
   return {
     cpf: trim(p.cpf) ?? undefined,
     cns: trim(p.cns) ?? undefined,
@@ -49,13 +69,15 @@ function pacienteToCitizenDto(p: {
     nomePai: trim(p.nomePai) ?? undefined,
     dataNascimento: toISODate(p.dataNascimento) ?? undefined,
     sexo: trim(p.sexo) ?? undefined,
+    racaCor: trim(p.racaCor) ?? undefined,
     logradouro: trim(p.logradouro) ?? undefined,
     numero: trim(p.numero) ?? undefined,
     complemento: trim(p.complemento) ?? undefined,
     bairro: trim(p.bairro) ?? undefined,
     cep: trim(p.cep) ?? undefined,
     email: trim(p.emails) ?? undefined,
-    telefoneCelular: p.ddd ? `${trim(p.ddd)}` : undefined,
+    telefoneCelular: celularNormalizado,
+    telefoneResidencial: residencialNormalizado,
   };
 }
 

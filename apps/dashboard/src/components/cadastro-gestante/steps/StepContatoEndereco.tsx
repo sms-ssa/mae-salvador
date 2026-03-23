@@ -33,11 +33,9 @@ export function StepContatoEndereco({
   cepBuscando,
   onPesquisarCep,
 }: StepContatoEnderecoProps) {
-  const enderecoBloqueado =
-    form.cep.replace(/\D/g, "").length === 8 &&
-    Boolean(
-      form.tipoLogradouro || form.logradouro || form.bairro || form.municipio,
-    );
+  const enderecoBloqueado = true;
+  const normalizarTextoLivre = (v: string, max: number) =>
+    v.replace(/\s{2,}/g, " ").slice(0, max);
   return (
     <>
       <Card className="bg-muted/30 border-0 shadow-none">
@@ -52,7 +50,7 @@ export function StepContatoEndereco({
               </Label>
               <Input
                 id="ddd"
-                placeholder="71"
+                placeholder="2 dígitos"
                 value={form.ddd}
                 onChange={(e) =>
                   updateField(
@@ -115,7 +113,7 @@ export function StepContatoEndereco({
               <Label htmlFor="ddd-alt">DDD (alternativo)</Label>
               <Input
                 id="ddd-alt"
-                placeholder="71"
+                placeholder="2 dígitos"
                 value={form.dddAlternativo}
                 onChange={(e) =>
                   updateField(
@@ -177,7 +175,7 @@ export function StepContatoEndereco({
               <Label htmlFor="ddd-res">DDD (residencial)</Label>
               <Input
                 id="ddd-res"
-                placeholder="71"
+                placeholder="2 dígitos"
                 value={form.dddResidencial}
                 onChange={(e) =>
                   updateField(
@@ -216,14 +214,15 @@ export function StepContatoEndereco({
               type="email"
               placeholder="exemplo@email.com"
               value={form.email}
-              onChange={(e) => updateField("email", e.target.value)}
+              onChange={(e) => updateField("email", e.target.value.slice(0, 100))}
+              maxLength={100}
             />
             <p className="text-[10px] text-muted-foreground">
               Deve conter @ e ponto
             </p>
             {form.email.trim() && !form.email.includes("@") && (
               <p className="text-xs text-destructive">
-                E-mail deve conter @ e ponto.
+                E-mail inválido.
               </p>
             )}
           </div>
@@ -268,7 +267,7 @@ export function StepContatoEndereco({
               </div>
               {erroCep && <p className="text-sm text-destructive">{erroCep}</p>}
               <p className="text-[10px] text-muted-foreground">
-                8 dígitos. Busca na base de CEP (ViaCEP).
+                8 dígitos. Busca na base de CEP (eSUS PEC).
               </p>
             </div>
             <div className="space-y-2">
@@ -352,8 +351,12 @@ export function StepContatoEndereco({
                 id="numero"
                 placeholder="Nº"
                 value={form.numero}
-                onChange={(e) => updateField("numero", e.target.value)}
+                onChange={(e) =>
+                  updateField("numero", e.target.value.replace(/\D/g, "").slice(0, 7))
+                }
                 disabled={form.numeroSemNumero}
+                maxLength={7}
+                inputMode="numeric"
               />
             </div>
             <div className="space-y-2">
@@ -362,7 +365,10 @@ export function StepContatoEndereco({
                 id="complemento"
                 placeholder="Apto, Bloco..."
                 value={form.complemento}
-                onChange={(e) => updateField("complemento", e.target.value)}
+                onChange={(e) =>
+                  updateField("complemento", normalizarTextoLivre(e.target.value, 50))
+                }
+                maxLength={50}
               />
             </div>
           </div>
@@ -373,7 +379,10 @@ export function StepContatoEndereco({
               id="ponto-ref"
               placeholder="Ex.: próximo ao mercado, prédio azul"
               value={form.pontoReferencia}
-              onChange={(e) => updateField("pontoReferencia", e.target.value)}
+              onChange={(e) =>
+                updateField("pontoReferencia", normalizarTextoLivre(e.target.value, 100))
+              }
+              maxLength={100}
             />
           </div>
         </CardContent>

@@ -82,6 +82,10 @@ export async function POST(request: NextRequest) {
   const programaSocial = Array.isArray(body.programaSocial)
     ? (body.programaSocial.map((x) => String(x).trim()).filter(Boolean).join("; ") || "nenhum")
     : (String(body.programaSocial ?? "").trim() || "nenhum");
+  const programasSociaisList = programaSocial
+    .split(";")
+    .map((x) => x.trim())
+    .filter(Boolean);
   const nis = String(body.nis ?? "").trim() || null;
   const planoSaude = (String(body.planoSaude ?? "").trim() || null) as "sim" | "nao" | null;
   const manterAcompanhamentoUbs = (String(body.manterAcompanhamentoUbs ?? "").trim() || null) as "sim" | "nao" | null;
@@ -149,9 +153,9 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
-  if (email && (!email.includes("@") || !email.includes("."))) {
+  if (email && (email.length > 100 || !email.includes("@") || !email.includes("."))) {
     return NextResponse.json(
-      { ok: false, erro: "E-mail deve conter @ e ponto." },
+      { ok: false, erro: "E-mail inválido." },
       { status: 400 }
     );
   }
@@ -168,14 +172,18 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
-  const validPrograma = ["nenhum", "bolsa-familia", "bpc-loas", "aluguel-social", "outros"].includes(programaSocial);
+  const programasValidos = new Set(["nenhum", "bolsa-familia", "bpc-loas", "aluguel-social", "outros"]);
+  const validPrograma =
+    programasSociaisList.length > 0 &&
+    programasSociaisList.every((p) => programasValidos.has(p)) &&
+    !(programasSociaisList.includes("nenhum") && programasSociaisList.length > 1);
   if (!validPrograma) {
     return NextResponse.json(
       { ok: false, erro: "Programa social inválido." },
       { status: 400 }
     );
   }
-  if (programaSocial === "bolsa-familia") {
+  if (programasSociaisList.includes("bolsa-familia")) {
     const nisDigits = onlyDigits(nis ?? "", 11);
     if (nisDigits.length !== 11) {
       return NextResponse.json(
