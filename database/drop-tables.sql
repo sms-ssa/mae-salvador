@@ -10,6 +10,7 @@
 --
 
 -- Ordem: primeiro tabelas que referenciam outras; depois as de domínio
+DROP TABLE IF EXISTS gestante_esqueceu_senha_tentativas CASCADE;
 DROP TABLE IF EXISTS gestante_cadastro CASCADE;
 DROP TABLE IF EXISTS ubs CASCADE;
 DROP TABLE IF EXISTS distrito_sanitario CASCADE;

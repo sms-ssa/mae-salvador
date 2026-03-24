@@ -75,6 +75,7 @@ export function mapPacienteBaseFederalToDadosCadastro(
   const municipio = paciente.municipio != null ? trim(String(paciente.municipio)) || undefined : undefined;
   const email = trim(paciente.emails) || undefined;
   const telefoneCelular = trim(paciente.telefoneCelular) || undefined;
+  const telefoneResidencial = trim(paciente.telefoneResidencial) || undefined;
 
   const out: Partial<DadosPessoaisFromFederal> = {};
 
@@ -97,6 +98,7 @@ export function mapPacienteBaseFederalToDadosCadastro(
   if (municipio) out.municipio = municipio.slice(0, 100);
   if (email) out.email = email.slice(0, 100);
   if (telefoneCelular) out.telefoneCelular = telefoneCelular.slice(0, 11);
+  if (telefoneResidencial) out.telefoneResidencial = telefoneResidencial.slice(0, 10);
 
   return out;
 }

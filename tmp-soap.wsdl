@@ -1,0 +1,287 @@
+<?xml version='1.0' encoding='UTF-8'?><wsdl:definitions name="ServicoCnsService" targetNamespace="http://servicos.nti.sms.salvador.ba.br/" xmlns:ns1="http://schemas.xmlsoap.org/soap/http" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:tns="http://servicos.nti.sms.salvador.ba.br/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <wsdl:types>
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="unqualified" targetNamespace="http://servicos.nti.sms.salvador.ba.br/" xmlns:tns="http://servicos.nti.sms.salvador.ba.br/" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="PesquisarPacientePorCNS" type="tns:PesquisarPacientePorCNS"/>
+  <xs:element name="PesquisarPacientePorCNSResponse" type="tns:PesquisarPacientePorCNSResponse"/>
+  <xs:element name="PesquisarPacientePorCPF" type="tns:PesquisarPacientePorCPF"/>
+  <xs:element name="PesquisarPacientePorCPFResponse" type="tns:PesquisarPacientePorCPFResponse"/>
+  <xs:element name="PesquisarPacientePorNomeDataNascimento" type="tns:PesquisarPacientePorNomeDataNascimento"/>
+  <xs:element name="PesquisarPacientePorNomeDataNascimentoResponse" type="tns:PesquisarPacientePorNomeDataNascimentoResponse"/>
+  <xs:element name="PesquisarPacientePorNomeNomeMae" type="tns:PesquisarPacientePorNomeNomeMae"/>
+  <xs:element name="PesquisarPacientePorNomeNomeMaeResponse" type="tns:PesquisarPacientePorNomeNomeMaeResponse"/>
+  <xs:complexType name="PesquisarPacientePorNomeNomeMae">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="nome" type="xs:string"/>
+      <xs:element minOccurs="0" name="nomeMae" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="PesquisarPacientePorNomeNomeMaeResponse">
+    <xs:sequence>
+      <xs:element maxOccurs="unbounded" minOccurs="0" name="return" type="tns:pessoa"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="pessoa">
+    <xs:sequence>
+      <xs:element maxOccurs="unbounded" minOccurs="0" name="certidoes" nillable="true" type="tns:certidao"/>
+      <xs:element maxOccurs="unbounded" minOccurs="0" name="cns" nillable="true" type="tns:cns"/>
+      <xs:element minOccurs="0" name="cpf" type="xs:string"/>
+      <xs:element minOccurs="0" name="ctps" type="tns:ctps"/>
+      <xs:element minOccurs="0" name="dataNascimento" type="xs:dateTime"/>
+      <xs:element minOccurs="0" name="dataObito" type="xs:dateTime"/>
+      <xs:element maxOccurs="unbounded" minOccurs="0" name="emails" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="endereco" type="tns:endereco"/>
+      <xs:element minOccurs="0" name="estadoCivil" type="xs:string"/>
+      <xs:element minOccurs="0" name="idSistemaLocal" type="xs:string"/>
+      <xs:element minOccurs="0" name="nacionalidade" type="tns:nacionalidade"/>
+      <xs:element minOccurs="0" name="nome" type="xs:string"/>
+      <xs:element minOccurs="0" name="nomeMae" type="xs:string"/>
+      <xs:element minOccurs="0" name="nomePai" type="xs:string"/>
+      <xs:element minOccurs="0" name="nomeSocial" type="xs:string"/>
+      <xs:element minOccurs="0" name="pisPasep" type="xs:string"/>
+      <xs:element minOccurs="0" name="racaCorEtnia" type="tns:racaCorEtnia"/>
+      <xs:element minOccurs="0" name="rg" type="tns:rg"/>
+      <xs:element minOccurs="0" name="sexo" type="xs:string"/>
+      <xs:element maxOccurs="unbounded" minOccurs="0" name="telefones" nillable="true" type="tns:telefone"/>
+      <xs:element minOccurs="0" name="tituloEleitor" type="tns:tituloEleitor"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="certidao">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="cartorio" type="xs:string"/>
+      <xs:element minOccurs="0" name="dataEmissao" type="xs:dateTime"/>
+      <xs:element minOccurs="0" name="folha" type="xs:string"/>
+      <xs:element minOccurs="0" name="livro" type="xs:string"/>
+      <xs:element minOccurs="0" name="novaCertidao" type="xs:string"/>
+      <xs:element minOccurs="0" name="termo" type="xs:string"/>
+      <xs:element name="tipo" type="xs:int"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="cns">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="numero" type="xs:string"/>
+      <xs:element minOccurs="0" name="tipo" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ctps">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="dataEmissao" type="xs:dateTime"/>
+      <xs:element minOccurs="0" name="numero" type="xs:string"/>
+      <xs:element minOccurs="0" name="serie" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="endereco">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="bairro" type="xs:string"/>
+      <xs:element minOccurs="0" name="cep" type="xs:string"/>
+      <xs:element minOccurs="0" name="codigoPaisResidencia" type="xs:string"/>
+      <xs:element minOccurs="0" name="codigoTipoLogradouro" type="xs:string"/>
+      <xs:element minOccurs="0" name="complemento" type="xs:string"/>
+      <xs:element minOccurs="0" name="logradouro" type="xs:string"/>
+      <xs:element minOccurs="0" name="municipioResidencia" type="xs:string"/>
+      <xs:element minOccurs="0" name="numero" type="xs:string"/>
+      <xs:element minOccurs="0" name="uf" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="nacionalidade">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="codigoMunicipioNascimento" type="xs:string"/>
+      <xs:element minOccurs="0" name="codigoPais" type="xs:string"/>
+      <xs:element minOccurs="0" name="dataEntradaBrasil" type="xs:dateTime"/>
+      <xs:element minOccurs="0" name="dataNaturalizacao" type="xs:dateTime"/>
+      <xs:element minOccurs="0" name="portariaNaturalizacao" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="racaCorEtnia">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="etnia" type="xs:string"/>
+      <xs:element name="racaCor" type="xs:int"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="rg">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="codigoOrgaoEmissor" type="xs:string"/>
+      <xs:element minOccurs="0" name="dataEmissao" type="xs:dateTime"/>
+      <xs:element minOccurs="0" name="numero" type="xs:string"/>
+      <xs:element minOccurs="0" name="uf" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="telefone">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="ddd" type="xs:string"/>
+      <xs:element minOccurs="0" name="ddi" type="xs:string"/>
+      <xs:element minOccurs="0" name="numero" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="tituloEleitor">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="numero" type="xs:string"/>
+      <xs:element minOccurs="0" name="secao" type="xs:string"/>
+      <xs:element minOccurs="0" name="zona" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="PesquisarPacientePorCPF">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="cpf" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="PesquisarPacientePorCPFResponse">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="return" type="tns:pessoa"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="PesquisarPacientePorCNS">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="cns" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="PesquisarPacientePorCNSResponse">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="return" type="tns:pessoa"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="PesquisarPacientePorNomeDataNascimento">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="nome" type="xs:string"/>
+      <xs:element minOccurs="0" name="dataNascimento" type="xs:dateTime"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="PesquisarPacientePorNomeDataNascimentoResponse">
+    <xs:sequence>
+      <xs:element maxOccurs="unbounded" minOccurs="0" name="return" type="tns:pessoa"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="Exception" type="tns:Exception"/>
+  <xs:complexType name="Exception">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="message" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>
+  </wsdl:types>
+  <wsdl:message name="PesquisarPacientePorCPFResponse">
+    <wsdl:part element="tns:PesquisarPacientePorCPFResponse" name="parameters">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="PesquisarPacientePorCNS">
+    <wsdl:part element="tns:PesquisarPacientePorCNS" name="parameters">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="PesquisarPacientePorCPF">
+    <wsdl:part element="tns:PesquisarPacientePorCPF" name="parameters">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="PesquisarPacientePorNomeDataNascimento">
+    <wsdl:part element="tns:PesquisarPacientePorNomeDataNascimento" name="parameters">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="PesquisarPacientePorNomeNomeMae">
+    <wsdl:part element="tns:PesquisarPacientePorNomeNomeMae" name="parameters">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="PesquisarPacientePorNomeNomeMaeResponse">
+    <wsdl:part element="tns:PesquisarPacientePorNomeNomeMaeResponse" name="parameters">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="PesquisarPacientePorNomeDataNascimentoResponse">
+    <wsdl:part element="tns:PesquisarPacientePorNomeDataNascimentoResponse" name="parameters">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="PesquisarPacientePorCNSResponse">
+    <wsdl:part element="tns:PesquisarPacientePorCNSResponse" name="parameters">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="Exception">
+    <wsdl:part element="tns:Exception" name="Exception">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:portType name="ServicoCns">
+    <wsdl:operation name="PesquisarPacientePorNomeNomeMae">
+      <wsdl:input message="tns:PesquisarPacientePorNomeNomeMae" name="PesquisarPacientePorNomeNomeMae">
+    </wsdl:input>
+      <wsdl:output message="tns:PesquisarPacientePorNomeNomeMaeResponse" name="PesquisarPacientePorNomeNomeMaeResponse">
+    </wsdl:output>
+      <wsdl:fault message="tns:Exception" name="Exception">
+    </wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="PesquisarPacientePorCPF">
+      <wsdl:input message="tns:PesquisarPacientePorCPF" name="PesquisarPacientePorCPF">
+    </wsdl:input>
+      <wsdl:output message="tns:PesquisarPacientePorCPFResponse" name="PesquisarPacientePorCPFResponse">
+    </wsdl:output>
+      <wsdl:fault message="tns:Exception" name="Exception">
+    </wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="PesquisarPacientePorCNS">
+      <wsdl:input message="tns:PesquisarPacientePorCNS" name="PesquisarPacientePorCNS">
+    </wsdl:input>
+      <wsdl:output message="tns:PesquisarPacientePorCNSResponse" name="PesquisarPacientePorCNSResponse">
+    </wsdl:output>
+      <wsdl:fault message="tns:Exception" name="Exception">
+    </wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="PesquisarPacientePorNomeDataNascimento">
+      <wsdl:input message="tns:PesquisarPacientePorNomeDataNascimento" name="PesquisarPacientePorNomeDataNascimento">
+    </wsdl:input>
+      <wsdl:output message="tns:PesquisarPacientePorNomeDataNascimentoResponse" name="PesquisarPacientePorNomeDataNascimentoResponse">
+    </wsdl:output>
+      <wsdl:fault message="tns:Exception" name="Exception">
+    </wsdl:fault>
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="ServicoCnsServiceSoapBinding" type="tns:ServicoCns">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <wsdl:operation name="PesquisarPacientePorNomeNomeMae">
+      <soap:operation soapAction="" style="document"/>
+      <wsdl:input name="PesquisarPacientePorNomeNomeMae">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="PesquisarPacientePorNomeNomeMaeResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+      <wsdl:fault name="Exception">
+        <soap:fault name="Exception" use="literal"/>
+      </wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="PesquisarPacientePorCPF">
+      <soap:operation soapAction="" style="document"/>
+      <wsdl:input name="PesquisarPacientePorCPF">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="PesquisarPacientePorCPFResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+      <wsdl:fault name="Exception">
+        <soap:fault name="Exception" use="literal"/>
+      </wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="PesquisarPacientePorCNS">
+      <soap:operation soapAction="" style="document"/>
+      <wsdl:input name="PesquisarPacientePorCNS">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="PesquisarPacientePorCNSResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+      <wsdl:fault name="Exception">
+        <soap:fault name="Exception" use="literal"/>
+      </wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="PesquisarPacientePorNomeDataNascimento">
+      <soap:operation soapAction="" style="document"/>
+      <wsdl:input name="PesquisarPacientePorNomeDataNascimento">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="PesquisarPacientePorNomeDataNascimentoResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+      <wsdl:fault name="Exception">
+        <soap:fault name="Exception" use="literal"/>
+      </wsdl:fault>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:service name="ServicoCnsService">
+    <wsdl:port binding="tns:ServicoCnsServiceSoapBinding" name="ServicoCnsPort">
+      <soap:address location="http://177.20.6.29:8181/JAXWebserviceCnsMS/ServicoCns"/>
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>

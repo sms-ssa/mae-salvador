@@ -69,6 +69,9 @@ async function main() {
     "003_gestante_cadastro_fks.sql",
     "004_cadastro_gestante_contatos_endereco.sql",
     "005_gestante_municipio_nascimento.sql",
+    "006_gestante_esqueceu_senha_tentativas.sql",
+    "007_gestante_programa_social_multiplos.sql",
+    "008_gestante_cadastro_programa_social_ids.sql",
   ];
 
   try {

@@ -141,6 +141,7 @@ export interface DadosPessoaisFromFederal {
   municipio?: string;
   email?: string;
   telefoneCelular?: string;
+  telefoneResidencial?: string;
 }
 
 /**
