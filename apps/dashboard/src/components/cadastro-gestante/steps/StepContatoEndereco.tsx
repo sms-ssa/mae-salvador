@@ -11,9 +11,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Search } from "lucide-react";
+import { CircleAlert, Search } from "lucide-react";
 import type { FormCadastroGestante } from "../validators/validacoesCadastroGestante";
-import { formatCep } from "../validators/validacoesCadastroGestante";
+import { formatCep, isDddValido } from "../validators/validacoesCadastroGestante";
 
 interface StepContatoEnderecoProps {
   form: FormCadastroGestante;
@@ -24,6 +24,9 @@ interface StepContatoEnderecoProps {
   erroCep: string;
   cepBuscando: boolean;
   onPesquisarCep: () => void;
+  exibirCriticaMunicipio: boolean;
+  respostaMunicipioForaSalvador: "" | "sim" | "nao";
+  onResponderCriticaMunicipio: (resposta: "sim" | "nao") => void;
 }
 
 export function StepContatoEndereco({
@@ -32,10 +35,21 @@ export function StepContatoEndereco({
   erroCep,
   cepBuscando,
   onPesquisarCep,
+  exibirCriticaMunicipio,
+  respostaMunicipioForaSalvador,
+  onResponderCriticaMunicipio,
 }: StepContatoEnderecoProps) {
   const enderecoBloqueado = true;
   const normalizarTextoLivre = (v: string, max: number) =>
     v.replace(/\s{2,}/g, " ").slice(0, max);
+  const celularPrincipalOk =
+    isDddValido(form.ddd) &&
+    form.celularPrincipal.replace(/\D/g, "").length === 9 &&
+    form.celularPrincipal.replace(/\D/g, "").startsWith("9");
+  const celularAlternativoOk =
+    isDddValido(form.dddAlternativo) &&
+    form.celularAlternativo.replace(/\D/g, "").length === 9 &&
+    form.celularAlternativo.replace(/\D/g, "").startsWith("9");
   return (
     <>
       <Card className="bg-muted/30 border-0 shadow-none">
@@ -92,6 +106,7 @@ export function StepContatoEndereco({
                   id="tem-whatsapp"
                   type="checkbox"
                   checked={form.temWhatsapp}
+                  disabled={!celularPrincipalOk}
                   onChange={(e) => updateField("temWhatsapp", e.target.checked)}
                   className="peer sr-only"
                 />
@@ -100,6 +115,7 @@ export function StepContatoEndereco({
                   className="h-9 w-full select-none cursor-pointer inline-flex items-center justify-center gap-2 rounded-md border px-3 text-sm font-medium transition-colors
                     border-[#25D366]/40 bg-white text-foreground hover:bg-[#25D366]/10
                     peer-checked:border-[#25D366] peer-checked:bg-[#25D366] peer-checked:text-white peer-checked:hover:bg-[#20BD5B]
+                    peer-disabled:cursor-not-allowed peer-disabled:opacity-50
                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/40 focus-visible:ring-offset-2"
                 >
                   WhatsApp
@@ -152,6 +168,7 @@ export function StepContatoEndereco({
                   id="tem-whatsapp-alt"
                   type="checkbox"
                   checked={form.temWhatsappAlternativo}
+                  disabled={!celularAlternativoOk}
                   onChange={(e) =>
                     updateField("temWhatsappAlternativo", e.target.checked)
                   }
@@ -162,6 +179,7 @@ export function StepContatoEndereco({
                   className="h-9 w-full select-none cursor-pointer inline-flex items-center justify-center gap-2 rounded-md border px-3 text-sm font-medium transition-colors
                     border-[#25D366]/40 bg-white text-foreground hover:bg-[#25D366]/10
                     peer-checked:border-[#25D366] peer-checked:bg-[#25D366] peer-checked:text-white peer-checked:hover:bg-[#20BD5B]
+                    peer-disabled:cursor-not-allowed peer-disabled:opacity-50
                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/40 focus-visible:ring-offset-2"
                 >
                   WhatsApp
@@ -281,6 +299,58 @@ export function StepContatoEndereco({
               />
             </div>
           </div>
+          {exibirCriticaMunicipio && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50/70 px-4 py-3 space-y-3">
+              <div className="flex items-start gap-2">
+                <CircleAlert className="h-4 w-4 mt-0.5 text-amber-700 shrink-0" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-amber-900">
+                    Critério de elegibilidade do Programa Mãe Salvador
+                  </p>
+                  <p className="text-sm text-amber-900 leading-relaxed">
+                    O Programa Mãe Salvador contempla gestantes que residem,
+                    trabalham ou estudam no município de Salvador, desde que
+                    realizem o acompanhamento pré-natal em uma unidade de saúde
+                    do município, seja em Unidade de Saúde da Família (USF) ou
+                    Unidade Básica de Saúde (UBS). Você se enquadra nesses
+                    critérios?
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={
+                    respostaMunicipioForaSalvador === "sim"
+                      ? "default"
+                      : "outline"
+                  }
+                  onClick={() => onResponderCriticaMunicipio("sim")}
+                >
+                  Sim, me enquadro
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={
+                    respostaMunicipioForaSalvador === "nao"
+                      ? "secondary"
+                      : "outline"
+                  }
+                  onClick={() => onResponderCriticaMunicipio("nao")}
+                >
+                  Não me enquadro
+                </Button>
+              </div>
+              {respostaMunicipioForaSalvador === "nao" && (
+                <p className="text-xs text-amber-900">
+                  Para continuar, revise o município de residência ou confirme
+                  os critérios selecionando a opção "Sim, me enquadro".
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">

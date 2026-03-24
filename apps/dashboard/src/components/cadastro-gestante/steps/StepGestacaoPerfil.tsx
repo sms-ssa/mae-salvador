@@ -17,9 +17,15 @@ interface StepGestacaoPerfilProps {
   form: FormCadastroGestante;
   updateField: <K extends keyof FormCadastroGestante>(key: K, value: FormCadastroGestante[K]) => void;
   erroDum: string;
+  programasSociais: Array<{ id: string; codigo: string; label: string }>;
 }
 
-export function StepGestacaoPerfil({ form, updateField, erroDum }: StepGestacaoPerfilProps) {
+export function StepGestacaoPerfil({
+  form,
+  updateField,
+  erroDum,
+  programasSociais,
+}: StepGestacaoPerfilProps) {
   return (
     <>
       <Card className="bg-muted/30 border-0 shadow-none">
@@ -70,27 +76,19 @@ export function StepGestacaoPerfil({ form, updateField, erroDum }: StepGestacaoP
             <div className="space-y-2">
               <Label>Programa social <span className="text-red-500">*</span></Label>
               <div className="flex flex-wrap gap-2">
-                {(
-                  [
-                    { value: "nenhum", label: "Nenhum", hint: "exclusivo" },
-                    { value: "bolsa-familia", label: "Bolsa Família" },
-                    { value: "bpc-loas", label: "BPC/LOAS" },
-                    { value: "aluguel-social", label: "Aluguel Social" },
-                    { value: "outros", label: "Outros" },
-                  ] as const
-                ).map((op) => {
-                  const id = `programa-social-${op.value}`;
-                  const selected = form.programaSocial.includes(op.value);
+                {programasSociais.map((op) => {
+                  const checkboxId = `programa-social-${op.codigo}`;
+                  const selected = form.programaSocial.includes(op.codigo);
                   return (
-                    <div key={op.value} className="flex items-center">
+                    <div key={op.id} className="flex items-center">
                       <input
-                        id={id}
+                        id={checkboxId}
                         type="checkbox"
                         checked={selected}
                         onChange={(e) => {
                           const checked = e.target.checked;
                           const current = form.programaSocial;
-                          if (op.value === "nenhum") {
+                          if (op.codigo === "nenhum") {
                             updateField("programaSocial", checked ? ["nenhum"] : []);
                             return;
                           }
@@ -98,23 +96,23 @@ export function StepGestacaoPerfil({ form, updateField, erroDum }: StepGestacaoP
                           if (checked) {
                             updateField(
                               "programaSocial",
-                              Array.from(new Set([...withoutNenhum, op.value])),
+                              Array.from(new Set([...withoutNenhum, op.codigo])),
                             );
                           } else {
                             updateField(
                               "programaSocial",
-                              withoutNenhum.filter((v) => v !== op.value),
+                              withoutNenhum.filter((v) => v !== op.codigo),
                             );
                           }
                         }}
                         className="peer sr-only"
                       />
                       <Label
-                        htmlFor={id}
+                        htmlFor={checkboxId}
                         className="cursor-pointer select-none rounded-md border px-3 py-2 text-sm font-medium transition-colors
                           bg-background hover:bg-muted/40
                           peer-checked:border-primary/50 peer-checked:bg-primary/10"
-                        title={"hint" in op && op.hint ? `Opção ${op.hint}` : undefined}
+                        title={op.codigo === "nenhum" ? "Opção exclusiva" : undefined}
                       >
                         {op.label}
                       </Label>

@@ -57,7 +57,6 @@ export async function GET(req: NextRequest) {
 
     const result = await pool.query(query, [cep]);
     const row = result.rows?.[0] as Record<string, unknown> | undefined;
-    console.log("row", row);
     if (!row) {
       return NextResponse.json(
         { erro: "CEP não localizado." },

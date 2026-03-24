@@ -24,6 +24,7 @@ export default function GestanteEsqueceuSenhaPage() {
   const [notificacao, setNotificacao] = useState("");
   const [erroSenha, setErroSenha] = useState("");
   const [carregando, setCarregando] = useState(false);
+  const [tentativasRestantes, setTentativasRestantes] = useState<number>(3);
 
   async function handleBuscarPergunta() {
     setNotificacao("");
@@ -43,6 +44,11 @@ export default function GestanteEsqueceuSenhaPage() {
       }
       setPergunta(data.pergunta ?? "");
       setOpcoes(data.opcoes ?? []);
+      setTentativasRestantes(
+        typeof data.tentativasRestantes === "number"
+          ? data.tentativasRestantes
+          : 3,
+      );
       setEtapa("pergunta");
     } catch (_) {
       setNotificacao("Erro de conexão.");
@@ -66,6 +72,9 @@ export default function GestanteEsqueceuSenhaPage() {
         setEtapa("senha");
       } else {
         setNotificacao(data.erro ?? "Resposta incorreta. Tente novamente.");
+        if (typeof data.tentativasRestantes === "number") {
+          setTentativasRestantes(data.tentativasRestantes);
+        }
         if (data.erro?.includes("Limite")) {
           setEtapa("cpf");
         } else if (data.proximaPergunta && data.pergunta && data.opcoes) {
@@ -122,7 +131,8 @@ export default function GestanteEsqueceuSenhaPage() {
             <CardTitle className="text-lg">Alteração de Senha</CardTitle>
             <p className="text-sm text-muted-foreground">
               {etapa === "cpf" && "Informe seu CPF ou CNS para receber uma pergunta de segurança."}
-              {etapa === "pergunta" && "Responda à pergunta abaixo (até 3 tentativas)."}
+              {etapa === "pergunta" &&
+                `Responda à pergunta abaixo (${tentativasRestantes} tentativa(s) restante(s)).`}
               {etapa === "senha" && "Crie uma nova senha (6 a 15 caracteres)."}
             </p>
           </CardHeader>

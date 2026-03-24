@@ -94,9 +94,7 @@ export default function PesquisaCidadaoPage() {
       }
       const paciente = data?.paciente;
       const cpfDefinitivo =
-        paciente?.cpf != null
-          ? String(paciente.cpf).replace(/\D/g, "")
-          : "";
+        paciente?.cpf != null ? String(paciente.cpf).replace(/\D/g, "") : "";
       const cnsDefinitivo =
         paciente?.cns != null ? String(paciente.cns).replace(/\D/g, "") : "";
       const temPacienteValido =
@@ -116,7 +114,7 @@ export default function PesquisaCidadaoPage() {
         return;
       }
       setNotificacao(
-        "cidadão(ã) não localizado(a) no e-SUS PEC nem no CADWEB pelo CPF. Use a busca alternativa abaixo.",
+        "Cidadão(ã) não localizado(a) no e-SUS PEC nem no CADWEB pelo CPF. Use a busca alternativa abaixo.",
       );
       setBuscaAlternativa("cns");
     } catch {
@@ -286,7 +284,9 @@ export default function PesquisaCidadaoPage() {
         dataNascimento: dataNascimento || "",
       });
 
-      const buscaRes = await fetch(`/api/cns/buscar-por-dados?${qs.toString()}`);
+      const buscaRes = await fetch(
+        `/api/cns/buscar-por-dados?${qs.toString()}`,
+      );
       const buscaData = await buscaRes.json().catch(() => ({}));
 
       if (buscaRes.ok && buscaData?.sucesso && buscaData?.citizen) {
@@ -535,7 +535,7 @@ export default function PesquisaCidadaoPage() {
                       onChange={() => setBuscaAlternativa("dados")}
                       className="rounded-full"
                     />
-                    <span className="text-sm">Dados do Cidadão(ã)</span>
+                    <span className="text-sm">Dados do(a) Cidadão(ã)</span>
                   </label>
                 </div>
 
@@ -583,7 +583,9 @@ export default function PesquisaCidadaoPage() {
                         placeholder="Até 70 caracteres"
                         value={nomeCompletoAlt}
                         onChange={(e) => {
-                          const v = e.target.value.replace(/\s{2,}/g, " ").slice(0, 70);
+                          const v = e.target.value
+                            .replace(/\s{2,}/g, " ")
+                            .slice(0, 70);
                           setNomeCompletoAlt(v);
                           setErroNomeCompleto("");
                         }}
@@ -603,7 +605,9 @@ export default function PesquisaCidadaoPage() {
                         placeholder="Até 70 caracteres"
                         value={nomeMaeAlt}
                         onChange={(e) => {
-                          const v = e.target.value.replace(/\s{2,}/g, " ").slice(0, 70);
+                          const v = e.target.value
+                            .replace(/\s{2,}/g, " ")
+                            .slice(0, 70);
                           setNomeMaeAlt(v);
                           setErroNomeMae("");
                         }}

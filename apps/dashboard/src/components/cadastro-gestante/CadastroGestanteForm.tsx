@@ -29,6 +29,9 @@ export function CadastroGestanteForm() {
     canSubmitStep3,
     canSubmitStep4,
     faltando,
+    exigeConfirmacaoMunicipio,
+    respostaMunicipioForaSalvador,
+    setRespostaMunicipioForaSalvador,
     handleContinuar,
     handleVoltar,
     handleCancelar,
@@ -39,6 +42,7 @@ export function CadastroGestanteForm() {
     confirmacaoCarregando,
     fecharConfirmacao,
     pacienteLocalizado,
+    programasSociaisDisponiveis,
   } = useCadastroGestante();
 
   const canSubmit =
@@ -84,6 +88,9 @@ export function CadastroGestanteForm() {
                   erroCep={erros.cep}
                   cepBuscando={loading.cepBuscando}
                   onPesquisarCep={pesquisarCep}
+                  exibirCriticaMunicipio={exigeConfirmacaoMunicipio}
+                  respostaMunicipioForaSalvador={respostaMunicipioForaSalvador}
+                  onResponderCriticaMunicipio={setRespostaMunicipioForaSalvador}
                 />
               )}
               {etapa === 3 && (
@@ -91,6 +98,7 @@ export function CadastroGestanteForm() {
                   form={form}
                   updateField={updateField}
                   erroDum={erros.dum}
+                  programasSociais={programasSociaisDisponiveis}
                 />
               )}
               {etapa === 4 && (

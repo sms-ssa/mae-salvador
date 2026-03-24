@@ -12,6 +12,7 @@ import {
   getFaltando,
   getErrosStep1,
   validarDum,
+  isDddValido,
 } from "../validators/validacoesCadastroGestante";
 
 const CNS_PACIENTE_KEY = "cnsPaciente";
@@ -39,6 +40,12 @@ interface DadosPrefillFromFederal {
   email?: string;
   telefoneCelular?: string;
   telefoneResidencial?: string;
+}
+
+interface ProgramaSocialOption {
+  id: string;
+  codigo: string;
+  label: string;
 }
 
 type CitizenPrefillLike = {
@@ -285,6 +292,11 @@ export function useCadastroGestante() {
   const [confirmacaoCarregando, setConfirmacaoCarregando] = useState(false);
   const [confirmacaoData, setConfirmacaoData] = useState<ConfirmacaoData>(null);
   const [pacienteLocalizado, setPacienteLocalizado] = useState(false);
+  const [respostaMunicipioForaSalvador, setRespostaMunicipioForaSalvador] =
+    useState<"" | "sim" | "nao">("");
+  const [programasSociaisDisponiveis, setProgramasSociaisDisponiveis] = useState<
+    ProgramaSocialOption[]
+  >([]);
   const lastAutoCepLookupRef = useRef<string>("");
 
   const updateField = useCallback(
@@ -309,6 +321,23 @@ export function useCadastroGestante() {
         if (key === "possuiDeficiencia" && value !== true) {
           next.deficienciaTipos = [];
           next.deficiencia = "";
+        }
+        if (
+          key === "ddd" ||
+          key === "celularPrincipal" ||
+          key === "dddAlternativo" ||
+          key === "celularAlternativo"
+        ) {
+          const celularPrincipalOk =
+            isDddValido(next.ddd) &&
+            next.celularPrincipal.replace(/\D/g, "").length === 9 &&
+            next.celularPrincipal.replace(/\D/g, "").startsWith("9");
+          const celularAlternativoOk =
+            isDddValido(next.dddAlternativo) &&
+            next.celularAlternativo.replace(/\D/g, "").length === 9 &&
+            next.celularAlternativo.replace(/\D/g, "").startsWith("9");
+          if (!celularPrincipalOk) next.temWhatsapp = false;
+          if (!celularAlternativoOk) next.temWhatsappAlternativo = false;
         }
         if (key === "cep") {
           next.municipio = "";
@@ -454,11 +483,64 @@ export function useCadastroGestante() {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    let ativo = true;
+    const carregarProgramasSociais = async () => {
+      try {
+        const res = await fetch("/api/gestante/programas-sociais");
+        const data = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          itens?: ProgramaSocialOption[];
+        };
+        if (!ativo) return;
+        if (res.ok && data.ok && Array.isArray(data.itens)) {
+          setProgramasSociaisDisponiveis(data.itens);
+        }
+      } catch {}
+    };
+    void carregarProgramasSociais();
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
+  const isMunicipioSalvador = useCallback((municipio: string): boolean => {
+    const n = municipio
+      .trim()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toUpperCase();
+    return n === "SALVADOR";
+  }, []);
+
+  const exigeConfirmacaoMunicipio =
+    form.municipio.trim().length > 0 && !isMunicipioSalvador(form.municipio);
+
+  useEffect(() => {
+    if (!exigeConfirmacaoMunicipio && respostaMunicipioForaSalvador !== "") {
+      setRespostaMunicipioForaSalvador("");
+    }
+  }, [exigeConfirmacaoMunicipio, respostaMunicipioForaSalvador]);
+
   const canSubmitStep1 = validarStep1(form);
-  const canSubmitStep2 = validarStep2(form);
+  const canSubmitStep2 =
+    validarStep2(form) &&
+    (!exigeConfirmacaoMunicipio || respostaMunicipioForaSalvador === "sim");
   const canSubmitStep3 = validarStep3(form);
   const canSubmitStep4 = validarStep4(form);
-  const faltando = getFaltando(etapa, form);
+  const faltando = (() => {
+    const base = getFaltando(etapa, form);
+    if (
+      etapa === 2 &&
+      exigeConfirmacaoMunicipio &&
+      respostaMunicipioForaSalvador !== "sim"
+    ) {
+      base.push(
+        "Confirmação dos critérios do Programa Mãe Salvador para município de residência diferente de Salvador",
+      );
+    }
+    return base;
+  })();
   const errosStep1 = getErrosStep1(form);
 
   const handleCancelar = useCallback(() => {
@@ -593,6 +675,28 @@ export function useCadastroGestante() {
       const celP = form.celularPrincipal.replace(/\D/g, "").slice(0, 9);
       const telefoneCompleto =
         dddP.length === 2 && celP.length === 9 ? dddP + celP : "";
+      const programaSocialIds = form.programaSocial
+        .map((codigo) =>
+          programasSociaisDisponiveis.find((op) => op.codigo === codigo)?.id,
+        )
+        .filter(
+          (id): id is string => {
+            if (!id) return false;
+            return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+              id,
+            );
+          },
+        );
+      if (
+        !form.programaSocial.length ||
+        programaSocialIds.length !== form.programaSocial.length
+      ) {
+        setErroEnvio(
+          "Não foi possível validar os programas sociais selecionados. Tente novamente.",
+        );
+        setEnviando(false);
+        return;
+      }
       const payload = {
         cpf: cpfDig.length === 11 ? cpfDig : "",
         cns: cnsDig.length === 15 ? cnsDig : undefined,
@@ -616,9 +720,7 @@ export function useCadastroGestante() {
           const dddR = form.dddResidencial.replace(/\D/g, "").slice(0, 2);
           const numR = form.telefoneResidencial.replace(/\D/g, "").slice(0, 8);
           if (dddR.length === 2 && numR.length === 8) return dddR + numR;
-          return numR
-            ? form.telefoneResidencial.replace(/\D/g, "").slice(0, 8)
-            : undefined;
+          return undefined;
         })(),
         email: form.email.trim() || undefined,
         temWhatsapp: form.temWhatsapp,
@@ -639,7 +741,7 @@ export function useCadastroGestante() {
         municipio: form.municipio.trim() || undefined,
         pontoReferencia: form.pontoReferencia.trim() || undefined,
         descobrimento: form.descobrimento || undefined,
-        programaSocial: form.programaSocial.length ? form.programaSocial : ["nenhum"],
+        programaSocialIds,
         nis: form.nis.trim() || undefined,
         planoSaude: form.planoSaude || undefined,
         manterAcompanhamentoUbs: form.manterAcompanhamentoUbs || undefined,
@@ -705,7 +807,7 @@ export function useCadastroGestante() {
       }
       setEnviando(false);
     },
-    [etapa, canSubmitStep4, enviando, form, searchParams],
+    [etapa, canSubmitStep4, enviando, form, searchParams, programasSociaisDisponiveis],
   );
 
   const fecharConfirmacao = useCallback(
@@ -753,6 +855,9 @@ export function useCadastroGestante() {
     canSubmitStep3,
     canSubmitStep4,
     faltando,
+    exigeConfirmacaoMunicipio,
+    respostaMunicipioForaSalvador,
+    setRespostaMunicipioForaSalvador,
     handleContinuar,
     handleVoltar,
     handleCancelar,
@@ -763,5 +868,6 @@ export function useCadastroGestante() {
     confirmacaoCarregando,
     fecharConfirmacao,
     pacienteLocalizado,
+    programasSociaisDisponiveis,
   };
 }

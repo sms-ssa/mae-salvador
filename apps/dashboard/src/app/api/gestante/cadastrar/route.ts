@@ -3,8 +3,24 @@ import { getAppPool, isAppDatabaseConfigured } from "@/lib/db";
 import { insertGestanteCadastro } from "@/lib/repositories/gestante.repository";
 import { hashSenha } from "@/lib/senha";
 
+const DDD_VALIDOS = new Set([
+  "11", "12", "13", "14", "15", "16", "17", "18", "19",
+  "21", "22", "24", "27", "28",
+  "31", "32", "33", "34", "35", "37", "38",
+  "41", "42", "43", "44", "45", "46", "47", "48", "49",
+  "51", "53", "54", "55",
+  "61", "62", "63", "64", "65", "66", "67", "68", "69",
+  "71", "73", "74", "75", "77", "79",
+  "81", "82", "83", "84", "85", "86", "87", "88", "89",
+  "91", "92", "93", "94", "95", "96", "97", "98", "99",
+]);
+
 function onlyDigits(s: string | null | undefined, maxLen: number): string {
   return (s ?? "").replace(/\D/g, "").slice(0, maxLen);
+}
+
+function isDddValido(ddd: string): boolean {
+  return DDD_VALIDOS.has(ddd);
 }
 
 function toDate(s: string | null | undefined): string | null {
@@ -56,8 +72,10 @@ export async function POST(request: NextRequest) {
   // Campo legado (pergunta de segurança) removido do formulário.
   const municipioNascimento = null;
   const telefone = onlyDigits(String(body.telefone ?? ""), 11);
-  const telefoneAlternativo = String(body.telefoneAlternativo ?? "").trim() || null;
-  const telefoneResidencial = String(body.telefoneResidencial ?? "").trim() || null;
+  const telefoneAlternativoRaw = String(body.telefoneAlternativo ?? "").trim();
+  const telefoneResidencialRaw = String(body.telefoneResidencial ?? "").trim();
+  const telefoneAlternativo = telefoneAlternativoRaw || null;
+  const telefoneResidencial = telefoneResidencialRaw || null;
   const email = String(body.email ?? "").trim() || null;
   const temWhatsapp = Boolean(body.temWhatsapp);
   const nomeSocial = String(body.nomeSocial ?? "").trim() || null;
@@ -79,13 +97,9 @@ export async function POST(request: NextRequest) {
   const pontoReferencia = String(body.pontoReferencia ?? "").trim() || null;
   const distritoSanitarioId = String(body.distritoId ?? "").trim() || null;
   const descobrimentoGestacao = String(body.descobrimento ?? "").trim();
-  const programaSocial = Array.isArray(body.programaSocial)
-    ? (body.programaSocial.map((x) => String(x).trim()).filter(Boolean).join("; ") || "nenhum")
-    : (String(body.programaSocial ?? "").trim() || "nenhum");
-  const programasSociaisList = programaSocial
-    .split(";")
-    .map((x) => x.trim())
-    .filter(Boolean);
+  const programaSocialIds = Array.isArray(body.programaSocialIds)
+    ? body.programaSocialIds.map((x) => String(x).trim()).filter(Boolean)
+    : [];
   const nis = String(body.nis ?? "").trim() || null;
   const planoSaude = (String(body.planoSaude ?? "").trim() || null) as "sim" | "nao" | null;
   const manterAcompanhamentoUbs = (String(body.manterAcompanhamentoUbs ?? "").trim() || null) as "sim" | "nao" | null;
@@ -153,6 +167,31 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
+  const dddPrincipal = telefone.slice(0, 2);
+  if (!isDddValido(dddPrincipal)) {
+    return NextResponse.json(
+      { ok: false, erro: "DDD do telefone celular principal inválido." },
+      { status: 400 }
+    );
+  }
+  if (telefoneAlternativo) {
+    const telAltDigits = onlyDigits(telefoneAlternativo, 11);
+    if (telAltDigits.length !== 11 || telAltDigits[2] !== "9" || !isDddValido(telAltDigits.slice(0, 2))) {
+      return NextResponse.json(
+        { ok: false, erro: "Telefone celular alternativo inválido (DDD válido + 9 dígitos)." },
+        { status: 400 }
+      );
+    }
+  }
+  if (telefoneResidencial) {
+    const telResDigits = onlyDigits(telefoneResidencial, 10);
+    if (telResDigits.length !== 10 || !/^[2-5]/.test(telResDigits.slice(2)) || !isDddValido(telResDigits.slice(0, 2))) {
+      return NextResponse.json(
+        { ok: false, erro: "Telefone residencial inválido (DDD válido + 8 dígitos)." },
+        { status: 400 }
+      );
+    }
+  }
   if (email && (email.length > 100 || !email.includes("@") || !email.includes("."))) {
     return NextResponse.json(
       { ok: false, erro: "E-mail inválido." },
@@ -172,18 +211,40 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
-  const programasValidos = new Set(["nenhum", "bolsa-familia", "bpc-loas", "aluguel-social", "outros"]);
-  const validPrograma =
-    programasSociaisList.length > 0 &&
-    programasSociaisList.every((p) => programasValidos.has(p)) &&
-    !(programasSociaisList.includes("nenhum") && programasSociaisList.length > 1);
-  if (!validPrograma) {
+  if (!programaSocialIds.length) {
+    return NextResponse.json(
+      { ok: false, erro: "Programa social é obrigatório." },
+      { status: 400 }
+    );
+  }
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (programaSocialIds.some((id) => !uuidRegex.test(id))) {
     return NextResponse.json(
       { ok: false, erro: "Programa social inválido." },
       { status: 400 }
     );
   }
-  if (programasSociaisList.includes("bolsa-familia")) {
+  const pool = getAppPool();
+  const programasRes = await pool.query<{ id: string; codigo: string }>(
+    `SELECT id, codigo FROM programa_social WHERE id = ANY($1::uuid[])`,
+    [programaSocialIds],
+  );
+  const programasSelecionados = programasRes.rows;
+  if (programasSelecionados.length !== new Set(programaSocialIds).size) {
+    return NextResponse.json(
+      { ok: false, erro: "Programa social inválido." },
+      { status: 400 }
+    );
+  }
+  const codigosPrograma = programasSelecionados.map((p) => p.codigo);
+  if (codigosPrograma.includes("nenhum") && codigosPrograma.length > 1) {
+    return NextResponse.json(
+      { ok: false, erro: "Programa social inválido." },
+      { status: 400 }
+    );
+  }
+  if (codigosPrograma.includes("bolsa-familia")) {
     const nisDigits = onlyDigits(nis ?? "", 11);
     if (nisDigits.length !== 11) {
       return NextResponse.json(
@@ -209,7 +270,6 @@ export async function POST(request: NextRequest) {
   const racaCorDb = racaCor && ["BRANCA", "PARDA", "PRETA", "AMARELA", "INDIGENA"].includes(racaCor) ? racaCor : null;
   const sexoDb = sexo && ["FEMININO", "MASCULINO", "INDETERMINADO"].includes(sexo) ? sexo : null;
 
-  const pool = getAppPool();
   try {
     const id = await insertGestanteCadastro(pool, {
       cpf: cpfInserir,
@@ -243,7 +303,13 @@ export async function POST(request: NextRequest) {
       distritoSanitarioId,
       descobrimentoGestacao,
       dum,
-      programaSocial,
+      // Coluna legado (texto) permanece por compatibilidade com bases
+      // que ainda têm CHECK de valor único. Os múltiplos programas são
+      // persistidos na tabela de vínculo por IDs.
+      programaSocial: codigosPrograma.includes("nenhum")
+        ? "nenhum"
+        : (codigosPrograma[0] ?? "nenhum"),
+      programaSocialIds: programasSelecionados.map((p) => p.id),
       nis,
       planoSaude,
       manterAcompanhamentoUbs,

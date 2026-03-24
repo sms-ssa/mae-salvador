@@ -5,6 +5,22 @@
 
 import { validarCPF, validarCNS } from "@/lib/validacoes-login";
 
+const DDD_VALIDOS = new Set([
+  "11", "12", "13", "14", "15", "16", "17", "18", "19",
+  "21", "22", "24", "27", "28",
+  "31", "32", "33", "34", "35", "37", "38",
+  "41", "42", "43", "44", "45", "46", "47", "48", "49",
+  "51", "53", "54", "55",
+  "61", "62", "63", "64", "65", "66", "67", "68", "69",
+  "71", "73", "74", "75", "77", "79",
+  "81", "82", "83", "84", "85", "86", "87", "88", "89",
+  "91", "92", "93", "94", "95", "96", "97", "98", "99",
+]);
+
+export function isDddValido(ddd: string): boolean {
+  return DDD_VALIDOS.has(onlyDigits(ddd, 2));
+}
+
 export function formatCpf(value: string): string {
   const digits = value.replace(/\D/g, "").slice(0, 11);
   if (digits.length <= 3) return digits;
@@ -159,9 +175,9 @@ export function validarStep2(form: FormCadastroGestante): boolean {
   if ((dddDig.length > 0 && dddDig.length !== 2) || (celDig.length > 0 && celDig.length !== 9)) return false;
   if ((dddAltDig.length > 0 && dddAltDig.length !== 2) || (celAltDig.length > 0 && celAltDig.length !== 9)) return false;
   if ((dddResDig.length > 0 && dddResDig.length !== 2) || (residencialDig.length > 0 && residencialDig.length !== 8)) return false;
-  const telefonePrincipalOk = dddDig.length === 2 && celDig.length === 9 && celDig[0] === "9";
-  const telefoneAlternativoOk = dddAltDig.length === 2 && celAltDig.length === 9 && celAltDig[0] === "9";
-  const telefoneResidencialOk = dddResDig.length === 2 && residencialDig.length === 8 && /^[2-5]/.test(residencialDig);
+  const telefonePrincipalOk = dddDig.length === 2 && isDddValido(dddDig) && celDig.length === 9 && celDig[0] === "9";
+  const telefoneAlternativoOk = dddAltDig.length === 2 && isDddValido(dddAltDig) && celAltDig.length === 9 && celAltDig[0] === "9";
+  const telefoneResidencialOk = dddResDig.length === 2 && isDddValido(dddResDig) && residencialDig.length === 8 && /^[2-5]/.test(residencialDig);
   if (!telefonePrincipalOk && !telefoneResidencialOk) return false;
   if (form.temWhatsapp && !telefonePrincipalOk) return false;
   if (form.temWhatsappAlternativo && !telefoneAlternativoOk) return false;
@@ -265,9 +281,9 @@ export function getFaltando(etapa: 1 | 2 | 3 | 4, form: FormCadastroGestante): s
   const celAltDig = onlyDigits(form.celularAlternativo, 9);
   const dddResDig = onlyDigits(form.dddResidencial, 2);
   const residencialDig = onlyDigits(form.telefoneResidencial, 8);
-  const telefonePrincipalOk = dddDig.length === 2 && celDig.length === 9 && celDig[0] === "9";
-  const telefoneAlternativoOk = dddAltDig.length === 2 && celAltDig.length === 9 && celAltDig[0] === "9";
-  const telefoneResidencialOk = dddResDig.length === 2 && residencialDig.length === 8 && /^[2-5]/.test(residencialDig);
+  const telefonePrincipalOk = dddDig.length === 2 && isDddValido(dddDig) && celDig.length === 9 && celDig[0] === "9";
+  const telefoneAlternativoOk = dddAltDig.length === 2 && isDddValido(dddAltDig) && celAltDig.length === 9 && celAltDig[0] === "9";
+  const telefoneResidencialOk = dddResDig.length === 2 && isDddValido(dddResDig) && residencialDig.length === 8 && /^[2-5]/.test(residencialDig);
   const temCelularOuResidencial = telefonePrincipalOk || telefoneResidencialOk;
   const emailOk =
     !form.email.trim() ||
@@ -302,10 +318,13 @@ export function getFaltando(etapa: 1 | 2 | 3 | 4, form: FormCadastroGestante): s
   }
   if (etapa === 2) {
     if (dddDig.length > 0 && dddDig.length !== 2) faltando.push("DDD principal (2 dígitos)");
+    if (dddDig.length === 2 && !isDddValido(dddDig)) faltando.push("DDD principal inválido");
     if (celDig.length > 0 && celDig.length !== 9) faltando.push("Celular principal (9 dígitos)");
     if (dddAltDig.length > 0 && dddAltDig.length !== 2) faltando.push("DDD alternativo (2 dígitos)");
+    if (dddAltDig.length === 2 && !isDddValido(dddAltDig)) faltando.push("DDD alternativo inválido");
     if (celAltDig.length > 0 && celAltDig.length !== 9) faltando.push("Celular alternativo (9 dígitos)");
     if (dddResDig.length > 0 && dddResDig.length !== 2) faltando.push("DDD residencial (2 dígitos)");
+    if (dddResDig.length === 2 && !isDddValido(dddResDig)) faltando.push("DDD residencial inválido");
     if (residencialDig.length > 0 && residencialDig.length !== 8) faltando.push("Telefone residencial (8 dígitos)");
     if (!temCelularOuResidencial) faltando.push("Telefone Celular Principal ou Telefone Residencial (DDD + número)");
     if (form.temWhatsapp && !telefonePrincipalOk) faltando.push("WhatsApp principal exige DDD + celular principal válidos");
