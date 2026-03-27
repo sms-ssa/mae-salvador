@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { validarCpfOuCns } from "@/lib/validacoes-login";
 
 /**
  * Alteração de Senha (requisitos item 7).
@@ -29,8 +30,9 @@ export default function GestanteEsqueceuSenhaPage() {
   async function handleBuscarPergunta() {
     setNotificacao("");
     const dig = cpfCns.replace(/\D/g, "");
-    if (dig.length !== 11 && dig.length !== 15) {
-      setNotificacao("Informe CPF (11 dígitos) ou CNS (15 dígitos).");
+    const erroCpfCns = validarCpfOuCns(dig);
+    if (erroCpfCns) {
+      setNotificacao("CPF ou CNS inválido.");
       return;
     }
     setCarregando(true);
@@ -184,9 +186,6 @@ export default function GestanteEsqueceuSenhaPage() {
                     </Button>
                   ))}
                 </div>
-                <Button variant="ghost" className="w-full" onClick={() => { setEtapa("cpf"); setNotificacao(""); }}>
-                  Voltar e informar outro CPF/CNS
-                </Button>
               </>
             )}
 

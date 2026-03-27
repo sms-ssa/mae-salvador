@@ -32,6 +32,7 @@ export function CadastroGestanteForm() {
     exigeConfirmacaoMunicipio,
     respostaMunicipioForaSalvador,
     setRespostaMunicipioForaSalvador,
+    handleCancelarCadastroPorMunicipio,
     handleContinuar,
     handleVoltar,
     handleCancelar,
@@ -91,6 +92,9 @@ export function CadastroGestanteForm() {
                   exibirCriticaMunicipio={exigeConfirmacaoMunicipio}
                   respostaMunicipioForaSalvador={respostaMunicipioForaSalvador}
                   onResponderCriticaMunicipio={setRespostaMunicipioForaSalvador}
+                  onCancelarCadastroPorMunicipio={
+                    handleCancelarCadastroPorMunicipio
+                  }
                 />
               )}
               {etapa === 3 && (

@@ -134,7 +134,9 @@ function normalizeIdentidadeGeneroForSelect(value: unknown): string {
             ? "homem-trans"
             : v === "TRAVESTI"
               ? "travesti"
-              : v === "PESSOA_NAO_BINARIA" || v === "NAO_BINARIA" || v === "NAO_BINÁRIO"
+              : v === "PESSOA_NAO_BINARIA" ||
+                  v === "NAO_BINARIA" ||
+                  v === "NAO_BINÁRIO"
                 ? "pessoa-nao-binaria"
                 : s.trim();
   return IDENTIDADE_GENERO_SELECT_VALUES.includes(
@@ -183,7 +185,15 @@ function normalizeTipoLogradouroForSelect(value: unknown): string {
   if (v === "RUA") return "Rua";
   if (v === "AV" || v === "AVENIDA") return "Avenida";
   if (v === "PRACA" || v === "PCA") return "Praça";
-  if (v === "TRAVESSA" || v === "TV") return "Travessa";
+  if (
+    v === "TRAVESSA" ||
+    v === "TV" ||
+    v === "TRV" ||
+    v === "TR" ||
+    v.includes("TRAV")
+  ) {
+    return "Travessa";
+  }
   return "Outro";
 }
 
@@ -294,9 +304,8 @@ export function useCadastroGestante() {
   const [pacienteLocalizado, setPacienteLocalizado] = useState(false);
   const [respostaMunicipioForaSalvador, setRespostaMunicipioForaSalvador] =
     useState<"" | "sim" | "nao">("");
-  const [programasSociaisDisponiveis, setProgramasSociaisDisponiveis] = useState<
-    ProgramaSocialOption[]
-  >([]);
+  const [programasSociaisDisponiveis, setProgramasSociaisDisponiveis] =
+    useState<ProgramaSocialOption[]>([]);
   const lastAutoCepLookupRef = useRef<string>("");
 
   const updateField = useCallback(
@@ -321,6 +330,9 @@ export function useCadastroGestante() {
         if (key === "possuiDeficiencia" && value !== true) {
           next.deficienciaTipos = [];
           next.deficiencia = "";
+        }
+        if (key === "planoSaude" && value === "sim") {
+          next.manterAcompanhamentoUbs = "";
         }
         if (
           key === "ddd" ||
@@ -423,9 +435,13 @@ export function useCadastroGestante() {
           nomeCompleto: dados.nomeCompleto ?? prev.nomeCompleto,
           nomeSocial: dados.nomeSocial ?? prev.nomeSocial,
           // Se a base federal não trouxe nome da mãe/pai, marcamos como "Ignorado".
-          nomeMae: nomeMaeAusente ? "IGNORADA" : dados.nomeMae ?? prev.nomeMae,
+          nomeMae: nomeMaeAusente
+            ? "IGNORADA"
+            : (dados.nomeMae ?? prev.nomeMae),
           nomeMaeIgnorada: nomeMaeAusente,
-          nomePai: nomePaiAusente ? "IGNORADO" : dados.nomePai ?? prev.nomePai,
+          nomePai: nomePaiAusente
+            ? "IGNORADO"
+            : (dados.nomePai ?? prev.nomePai),
           nomePaiIgnorado: nomePaiAusente,
           dataNascimento: dados.dataNascimento ?? prev.dataNascimento,
           sexo: sexoVal || prev.sexo,
@@ -448,7 +464,7 @@ export function useCadastroGestante() {
             (dados.numero?.toUpperCase() === "S/N" || dados.numero === "s/n")
           ),
           complemento: dados.complemento ?? prev.complemento,
-          pontoReferencia: dados.complemento ?? prev.pontoReferencia,
+          pontoReferencia: prev.pontoReferencia,
           bairro: dados.bairro ?? prev.bairro,
           cep: dados.cep ? formatCepValue(dados.cep) : prev.cep,
           municipio:
@@ -547,6 +563,10 @@ export function useCadastroGestante() {
     router.push("/gestante/login");
   }, [router]);
 
+  const handleCancelarCadastroPorMunicipio = useCallback(() => {
+    router.push("/gestante/login");
+  }, [router]);
+
   const handleVoltar = useCallback(() => {
     setEtapa((e) => (e > 1 ? ((e - 1) as 1 | 2 | 3 | 4) : e));
   }, []);
@@ -589,15 +609,16 @@ export function useCadastroGestante() {
           return;
         }
         const tipoLogradouro = (data.tipoLogradouro ?? "").trim();
-      const tipoLogradouroNorm = normalizeTipoLogradouroForSelect(tipoLogradouro);
+        const tipoLogradouroNorm =
+          normalizeTipoLogradouroForSelect(tipoLogradouro);
         const logradouro = (data.logradouro ?? "").trim();
         const bairro = (data.bairro ?? "").trim();
         const localidade = (data.localidade ?? "").trim();
         setForm((prev) => ({
           ...prev,
           tipoLogradouro: force
-          ? tipoLogradouroNorm
-          : prev.tipoLogradouro || tipoLogradouroNorm,
+            ? tipoLogradouroNorm
+            : prev.tipoLogradouro || tipoLogradouroNorm,
           logradouro: force ? logradouro : prev.logradouro || logradouro,
           bairro: force ? bairro : prev.bairro || bairro,
           municipio: force ? localidade : prev.municipio || localidade,
@@ -676,17 +697,16 @@ export function useCadastroGestante() {
       const telefoneCompleto =
         dddP.length === 2 && celP.length === 9 ? dddP + celP : "";
       const programaSocialIds = form.programaSocial
-        .map((codigo) =>
-          programasSociaisDisponiveis.find((op) => op.codigo === codigo)?.id,
+        .map(
+          (codigo) =>
+            programasSociaisDisponiveis.find((op) => op.codigo === codigo)?.id,
         )
-        .filter(
-          (id): id is string => {
-            if (!id) return false;
-            return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-              id,
-            );
-          },
-        );
+        .filter((id): id is string => {
+          if (!id) return false;
+          return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+            id,
+          );
+        });
       if (
         !form.programaSocial.length ||
         programaSocialIds.length !== form.programaSocial.length
@@ -807,7 +827,14 @@ export function useCadastroGestante() {
       }
       setEnviando(false);
     },
-    [etapa, canSubmitStep4, enviando, form, searchParams, programasSociaisDisponiveis],
+    [
+      etapa,
+      canSubmitStep4,
+      enviando,
+      form,
+      searchParams,
+      programasSociaisDisponiveis,
+    ],
   );
 
   const fecharConfirmacao = useCallback(
@@ -858,6 +885,7 @@ export function useCadastroGestante() {
     exigeConfirmacaoMunicipio,
     respostaMunicipioForaSalvador,
     setRespostaMunicipioForaSalvador,
+    handleCancelarCadastroPorMunicipio,
     handleContinuar,
     handleVoltar,
     handleCancelar,

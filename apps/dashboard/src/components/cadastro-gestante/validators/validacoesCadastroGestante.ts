@@ -49,6 +49,13 @@ export function caracteresNomeValidos(s: string): boolean {
   return /^[\p{L}\s']+$/u.test(s);
 }
 
+/** Complemento/Ponto de referência: aceita letras, números e pontuação comum; veda espaço duplo. */
+export function caracteresEnderecoValidos(s: string): boolean {
+  if (!s.trim()) return true;
+  if (/\s\s/.test(s)) return false;
+  return /^[\p{L}\p{N}\s.,;:/\-()#ºª'"&]+$/u.test(s);
+}
+
 /** DUM: não pode ser menor que 7 dias nem maior que 294 dias (doc. Página 3). */
 export function validarDum(data: string): string | null {
   const d = data.trim();
@@ -172,16 +179,24 @@ export function validarStep2(form: FormCadastroGestante): boolean {
   const celAltDig = onlyDigits(form.celularAlternativo, 9);
   const dddResDig = onlyDigits(form.dddResidencial, 2);
   const residencialDig = onlyDigits(form.telefoneResidencial, 8);
-  if ((dddDig.length > 0 && dddDig.length !== 2) || (celDig.length > 0 && celDig.length !== 9)) return false;
-  if ((dddAltDig.length > 0 && dddAltDig.length !== 2) || (celAltDig.length > 0 && celAltDig.length !== 9)) return false;
-  if ((dddResDig.length > 0 && dddResDig.length !== 2) || (residencialDig.length > 0 && residencialDig.length !== 8)) return false;
   const telefonePrincipalOk = dddDig.length === 2 && isDddValido(dddDig) && celDig.length === 9 && celDig[0] === "9";
   const telefoneAlternativoOk = dddAltDig.length === 2 && isDddValido(dddAltDig) && celAltDig.length === 9 && celAltDig[0] === "9";
   const telefoneResidencialOk = dddResDig.length === 2 && isDddValido(dddResDig) && residencialDig.length === 8 && /^[2-5]/.test(residencialDig);
+  const principalInformado = dddDig.length > 0 || celDig.length > 0;
+  const alternativoInformado = dddAltDig.length > 0 || celAltDig.length > 0;
+  const residencialInformado = dddResDig.length > 0 || residencialDig.length > 0;
+
+  // Regra: qualquer telefone informado deve estar consistente individualmente.
+  if (principalInformado && !telefonePrincipalOk) return false;
+  if (alternativoInformado && !telefoneAlternativoOk) return false;
+  if (residencialInformado && !telefoneResidencialOk) return false;
+
   if (!telefonePrincipalOk && !telefoneResidencialOk) return false;
   if (form.temWhatsapp && !telefonePrincipalOk) return false;
   if (form.temWhatsappAlternativo && !telefoneAlternativoOk) return false;
   if (form.email.trim() && (form.email.length > 100 || !form.email.includes("@") || !form.email.includes("."))) return false;
+  if (!caracteresEnderecoValidos(form.complemento)) return false;
+  if (!caracteresEnderecoValidos(form.pontoReferencia)) return false;
   if (onlyDigits(form.cep, 8).length !== 8) return false;
   if (!form.logradouro.trim() || !form.bairro.trim() || !form.municipio.trim() || !form.tipoLogradouro.trim()) return false;
   if (!form.numeroSemNumero && (!form.numero.trim() || onlyDigits(form.numero, 7).length === 0)) return false;
@@ -284,6 +299,9 @@ export function getFaltando(etapa: 1 | 2 | 3 | 4, form: FormCadastroGestante): s
   const telefonePrincipalOk = dddDig.length === 2 && isDddValido(dddDig) && celDig.length === 9 && celDig[0] === "9";
   const telefoneAlternativoOk = dddAltDig.length === 2 && isDddValido(dddAltDig) && celAltDig.length === 9 && celAltDig[0] === "9";
   const telefoneResidencialOk = dddResDig.length === 2 && isDddValido(dddResDig) && residencialDig.length === 8 && /^[2-5]/.test(residencialDig);
+  const principalInformado = dddDig.length > 0 || celDig.length > 0;
+  const alternativoInformado = dddAltDig.length > 0 || celAltDig.length > 0;
+  const residencialInformado = dddResDig.length > 0 || residencialDig.length > 0;
   const temCelularOuResidencial = telefonePrincipalOk || telefoneResidencialOk;
   const emailOk =
     !form.email.trim() ||
@@ -320,16 +338,24 @@ export function getFaltando(etapa: 1 | 2 | 3 | 4, form: FormCadastroGestante): s
     if (dddDig.length > 0 && dddDig.length !== 2) faltando.push("DDD principal (2 dígitos)");
     if (dddDig.length === 2 && !isDddValido(dddDig)) faltando.push("DDD principal inválido");
     if (celDig.length > 0 && celDig.length !== 9) faltando.push("Celular principal (9 dígitos)");
+    if (principalInformado && !telefonePrincipalOk && celDig.length === 9 && celDig[0] !== "9") faltando.push("Celular principal deve iniciar com 9");
+    if (principalInformado && !telefonePrincipalOk && dddDig.length === 2 && isDddValido(dddDig) && celDig.length === 9 && celDig[0] === "9") faltando.push("Telefone celular principal inválido");
     if (dddAltDig.length > 0 && dddAltDig.length !== 2) faltando.push("DDD alternativo (2 dígitos)");
     if (dddAltDig.length === 2 && !isDddValido(dddAltDig)) faltando.push("DDD alternativo inválido");
     if (celAltDig.length > 0 && celAltDig.length !== 9) faltando.push("Celular alternativo (9 dígitos)");
+    if (alternativoInformado && !telefoneAlternativoOk && celAltDig.length === 9 && celAltDig[0] !== "9") faltando.push("Celular alternativo deve iniciar com 9");
+    if (alternativoInformado && !telefoneAlternativoOk && dddAltDig.length === 2 && isDddValido(dddAltDig) && celAltDig.length === 9 && celAltDig[0] === "9") faltando.push("Telefone celular alternativo inválido");
     if (dddResDig.length > 0 && dddResDig.length !== 2) faltando.push("DDD residencial (2 dígitos)");
     if (dddResDig.length === 2 && !isDddValido(dddResDig)) faltando.push("DDD residencial inválido");
     if (residencialDig.length > 0 && residencialDig.length !== 8) faltando.push("Telefone residencial (8 dígitos)");
+    if (residencialInformado && !telefoneResidencialOk && residencialDig.length === 8 && !/^[2-5]/.test(residencialDig)) faltando.push("Telefone residencial deve iniciar com 2 a 5");
+    if (residencialInformado && !telefoneResidencialOk && dddResDig.length === 2 && isDddValido(dddResDig) && residencialDig.length === 8 && /^[2-5]/.test(residencialDig)) faltando.push("Telefone residencial inválido");
     if (!temCelularOuResidencial) faltando.push("Telefone Celular Principal ou Telefone Residencial (DDD + número)");
     if (form.temWhatsapp && !telefonePrincipalOk) faltando.push("WhatsApp principal exige DDD + celular principal válidos");
     if (form.temWhatsappAlternativo && !telefoneAlternativoOk) faltando.push("WhatsApp alternativo exige DDD + celular alternativo válidos");
     if (!emailOk) faltando.push("E-mail inválido");
+    if (!caracteresEnderecoValidos(form.complemento)) faltando.push("Complemento com caracteres inválidos");
+    if (!caracteresEnderecoValidos(form.pontoReferencia)) faltando.push("Ponto de referência com caracteres inválidos");
     if (onlyDigits(form.cep, 8).length !== 8) faltando.push("CEP (8 dígitos)");
     if (!form.logradouro.trim()) faltando.push("Nome do Logradouro");
     if (!form.numeroSemNumero && !form.numero.trim()) faltando.push("Número (ou marque S/N)");

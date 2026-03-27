@@ -43,6 +43,18 @@ export default function PesquisaCidadaoPage() {
   const [cadastroJaExiste, setCadastroJaExiste] = useState(false);
   const [carregando, setCarregando] = useState(false);
 
+  function limparCamposBuscaAlternativa() {
+    setCnsAlt("");
+    setErroCns("");
+    setNomeCompletoAlt("");
+    setNomeMaeAlt("");
+    setDataNascAlt("");
+    setErroDados("");
+    setErroNomeCompleto("");
+    setErroNomeMae("");
+    setErroDataNasc("");
+  }
+
   async function pesquisarPorCpf() {
     setErroCpf("");
     setNotificacao("");
@@ -114,12 +126,12 @@ export default function PesquisaCidadaoPage() {
         return;
       }
       setNotificacao(
-        "Cidadão(ã) não localizado(a) no e-SUS PEC nem no CADWEB pelo CPF. Use a busca alternativa abaixo.",
+        "Cidadão(ã) não localizado(a) no e-SUS PEC nem no CadSUS pelo CPF. Use a busca alternativa abaixo.",
       );
       setBuscaAlternativa("cns");
     } catch {
       setNotificacao(
-        "Cidadão(ã) não localizado(a) no e-SUS PEC nem no CADWEB pelo CPF. Use a busca alternativa abaixo.",
+        "Cidadão(ã) não localizado(a) no e-SUS PEC nem no CadSUS pelo CPF. Use a busca alternativa abaixo.",
       );
       setBuscaAlternativa("cns");
     }
@@ -497,9 +509,11 @@ export default function PesquisaCidadaoPage() {
                 onChange={(e) => {
                   setNaoPossui(e.target.checked);
                   if (e.target.checked) {
+                    limparCamposBuscaAlternativa();
                     setBuscaAlternativa("cns");
                     setNotificacao("");
                   } else {
+                    limparCamposBuscaAlternativa();
                     setBuscaAlternativa("");
                   }
                 }}
@@ -522,7 +536,10 @@ export default function PesquisaCidadaoPage() {
                       type="radio"
                       name="alt"
                       checked={buscaAlternativa === "cns"}
-                      onChange={() => setBuscaAlternativa("cns")}
+                      onChange={() => {
+                        limparCamposBuscaAlternativa();
+                        setBuscaAlternativa("cns");
+                      }}
                       className="rounded-full"
                     />
                     <span className="text-sm">Cartão Nacional de Saúde</span>
@@ -532,7 +549,10 @@ export default function PesquisaCidadaoPage() {
                       type="radio"
                       name="alt"
                       checked={buscaAlternativa === "dados"}
-                      onChange={() => setBuscaAlternativa("dados")}
+                      onChange={() => {
+                        limparCamposBuscaAlternativa();
+                        setBuscaAlternativa("dados");
+                      }}
                       className="rounded-full"
                     />
                     <span className="text-sm">Dados do(a) Cidadão(ã)</span>
@@ -541,7 +561,7 @@ export default function PesquisaCidadaoPage() {
 
                 {buscaAlternativa === "cns" && (
                   <div className="space-y-2">
-                    <Label htmlFor="cns-alt">CNS (15 dígitos)</Label>
+                    <Label htmlFor="cns-alt">CNS</Label>
                     <div className="flex gap-2">
                       <Input
                         id="cns-alt"

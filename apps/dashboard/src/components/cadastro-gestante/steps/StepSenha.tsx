@@ -51,7 +51,7 @@ export function StepSenha({ form, updateField, erroSenha }: StepSenhaProps) {
             className="mt-1 rounded border-input"
           />
           <span className="text-sm">
-            Declaro ciência e concordância com as informações prestadas neste cadastro.
+            Ciente das responsabilidades legais, atesto a veracidade das informações prestadas neste cadastro.
             <span className="text-red-500"> *</span>
           </span>
         </label>

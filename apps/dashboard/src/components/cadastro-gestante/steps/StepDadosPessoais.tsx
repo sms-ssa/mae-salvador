@@ -85,9 +85,7 @@ export function StepDadosPessoais({
               value={form.cpf}
               onChange={(e) => updateField("cpf", formatCpf(e.target.value))}
               maxLength={14}
-              className={
-                erros.cpf ? "border-destructive" : ""
-              }
+              className={erros.cpf ? "border-destructive" : ""}
               disabled={pacienteLocalizado}
             />
             {erros.cpf && (
@@ -112,9 +110,7 @@ export function StepDadosPessoais({
                 )
               }
               maxLength={15}
-              className={
-                erros.cns ? "border-destructive" : ""
-              }
+              className={erros.cns ? "border-destructive" : ""}
               disabled={pacienteLocalizado}
             />
             {erros.cns && (
@@ -129,7 +125,7 @@ export function StepDadosPessoais({
           </Label>
           <Input
             id="nome"
-            placeholder="Nome completo da gestante (até 70 caracteres)"
+            placeholder="Até 70 caracteres"
             value={form.nomeCompleto}
             onChange={(e) => {
               const v = normalizarNome(e.target.value).slice(0, 70);
@@ -165,7 +161,7 @@ export function StepDadosPessoais({
           </div>
           <Input
             id="nome-social"
-            placeholder="Nome social (se aplicável)"
+            placeholder="Até 70 caracteres"
             value={form.nomeSocial}
             onChange={(e) => {
               const v = normalizarNome(e.target.value).slice(0, 70);
@@ -179,9 +175,9 @@ export function StepDadosPessoais({
             }
           />
           <p className="text-xs text-muted-foreground">
-            Este campo é destinado a pessoas trans, travestis e demais pessoas de
-            outros grupos que utilizam Nome Social, conforme a Lei Municipal nº
-            7859/2010. Caso deseje ser identificado(a) pelo seu nome social,
+            Este campo é destinado a pessoas trans, travestis e demais pessoas
+            de outros grupos que utilizam Nome Social, conforme a Lei Municipal
+            nº 7859/2010. Caso deseje ser identificado(a) pelo seu nome social,
             preencha este campo com o nome escolhido e selecione a opção
             principal.
           </p>
@@ -336,11 +332,7 @@ export function StepDadosPessoais({
               <span className="text-sm">Não</span>
             </label>
           </div>
-          {form.possuiDeficiencia == null && (
-            <p className="text-xs text-muted-foreground">
-              Selecione uma opção para continuar.
-            </p>
-          )}
+
           {form.possuiDeficiencia && (
             <div className="mt-2 space-y-2">
               <p className="text-xs font-medium text-muted-foreground">

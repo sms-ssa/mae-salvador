@@ -13,7 +13,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { CircleAlert, Search } from "lucide-react";
 import type { FormCadastroGestante } from "../validators/validacoesCadastroGestante";
-import { formatCep, isDddValido } from "../validators/validacoesCadastroGestante";
+import {
+  formatCep,
+  isDddValido,
+  caracteresEnderecoValidos,
+} from "../validators/validacoesCadastroGestante";
 
 interface StepContatoEnderecoProps {
   form: FormCadastroGestante;
@@ -27,6 +31,7 @@ interface StepContatoEnderecoProps {
   exibirCriticaMunicipio: boolean;
   respostaMunicipioForaSalvador: "" | "sim" | "nao";
   onResponderCriticaMunicipio: (resposta: "sim" | "nao") => void;
+  onCancelarCadastroPorMunicipio: () => void;
 }
 
 export function StepContatoEndereco({
@@ -38,6 +43,7 @@ export function StepContatoEndereco({
   exibirCriticaMunicipio,
   respostaMunicipioForaSalvador,
   onResponderCriticaMunicipio,
+  onCancelarCadastroPorMunicipio,
 }: StepContatoEnderecoProps) {
   const enderecoBloqueado = true;
   const normalizarTextoLivre = (v: string, max: number) =>
@@ -50,18 +56,21 @@ export function StepContatoEndereco({
     isDddValido(form.dddAlternativo) &&
     form.celularAlternativo.replace(/\D/g, "").length === 9 &&
     form.celularAlternativo.replace(/\D/g, "").startsWith("9");
+  const complementoInvalido = !caracteresEnderecoValidos(form.complemento);
+  const pontoRefInvalido = !caracteresEnderecoValidos(form.pontoReferencia);
   return (
     <>
       <Card className="bg-muted/30 border-0 shadow-none">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm">Contatos</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Informe o telefone celular principal e/ou o telefone residencial.
+          </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="ddd">
-                DDD <span className="text-red-500">*</span>
-              </Label>
+              <Label htmlFor="ddd">DDD</Label>
               <Input
                 id="ddd"
                 placeholder="2 dígitos"
@@ -78,10 +87,7 @@ export function StepContatoEndereco({
               <p className="text-[10px] text-muted-foreground">2 dígitos</p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="celular">
-                Telefone celular principal{" "}
-                <span className="text-red-500">*</span>
-              </Label>
+              <Label htmlFor="celular">Telefone celular principal</Label>
               <Input
                 id="celular"
                 placeholder="99999-9999"
@@ -232,16 +238,16 @@ export function StepContatoEndereco({
               type="email"
               placeholder="exemplo@email.com"
               value={form.email}
-              onChange={(e) => updateField("email", e.target.value.slice(0, 100))}
+              onChange={(e) =>
+                updateField("email", e.target.value.slice(0, 100))
+              }
               maxLength={100}
             />
             <p className="text-[10px] text-muted-foreground">
               Deve conter @ e ponto
             </p>
             {form.email.trim() && !form.email.includes("@") && (
-              <p className="text-xs text-destructive">
-                E-mail inválido.
-              </p>
+              <p className="text-xs text-destructive">E-mail inválido.</p>
             )}
           </div>
         </CardContent>
@@ -249,9 +255,7 @@ export function StepContatoEndereco({
 
       <Card className="bg-muted/30 border-0 shadow-none">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm">
-            Endereço <span className="text-red-500 text-xs font-normal">*</span>
-          </CardTitle>
+          <CardTitle className="text-sm">Endereço</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -289,7 +293,9 @@ export function StepContatoEndereco({
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="municipio">Município</Label>
+              <Label htmlFor="municipio">
+                Município <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="municipio"
                 placeholder="Preenchido pela busca CEP"
@@ -333,28 +339,20 @@ export function StepContatoEndereco({
                 <Button
                   type="button"
                   size="sm"
-                  variant={
-                    respostaMunicipioForaSalvador === "nao"
-                      ? "secondary"
-                      : "outline"
-                  }
-                  onClick={() => onResponderCriticaMunicipio("nao")}
+                  variant="outline"
+                  onClick={onCancelarCadastroPorMunicipio}
                 >
-                  Não me enquadro
+                  Não me enquadro, cancelar cadastro
                 </Button>
               </div>
-              {respostaMunicipioForaSalvador === "nao" && (
-                <p className="text-xs text-amber-900">
-                  Para continuar, revise o município de residência ou confirme
-                  os critérios selecionando a opção "Sim, me enquadro".
-                </p>
-              )}
             </div>
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="tipo-logradouro">Tipo de logradouro</Label>
+              <Label htmlFor="tipo-logradouro">
+                Tipo de logradouro <span className="text-red-500">*</span>
+              </Label>
               <Select
                 value={form.tipoLogradouro || undefined}
                 onValueChange={(v) => updateField("tipoLogradouro", v)}
@@ -422,7 +420,10 @@ export function StepContatoEndereco({
                 placeholder="Nº"
                 value={form.numero}
                 onChange={(e) =>
-                  updateField("numero", e.target.value.replace(/\D/g, "").slice(0, 7))
+                  updateField(
+                    "numero",
+                    e.target.value.replace(/\D/g, "").slice(0, 7),
+                  )
                 }
                 disabled={form.numeroSemNumero}
                 maxLength={7}
@@ -436,10 +437,19 @@ export function StepContatoEndereco({
                 placeholder="Apto, Bloco..."
                 value={form.complemento}
                 onChange={(e) =>
-                  updateField("complemento", normalizarTextoLivre(e.target.value, 50))
+                  updateField(
+                    "complemento",
+                    normalizarTextoLivre(e.target.value, 50),
+                  )
                 }
                 maxLength={50}
+                className={complementoInvalido ? "border-destructive" : ""}
               />
+              {complementoInvalido && (
+                <p className="text-xs text-destructive">
+                  Existem caracteres inválidos no complemento.
+                </p>
+              )}
             </div>
           </div>
 
@@ -450,10 +460,19 @@ export function StepContatoEndereco({
               placeholder="Ex.: próximo ao mercado, prédio azul"
               value={form.pontoReferencia}
               onChange={(e) =>
-                updateField("pontoReferencia", normalizarTextoLivre(e.target.value, 100))
+                updateField(
+                  "pontoReferencia",
+                  normalizarTextoLivre(e.target.value, 100),
+                )
               }
               maxLength={100}
+              className={pontoRefInvalido ? "border-destructive" : ""}
             />
+            {pontoRefInvalido && (
+              <p className="text-xs text-destructive">
+                Existem caracteres inválidos no ponto de referência.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>

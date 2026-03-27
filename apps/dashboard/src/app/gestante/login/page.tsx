@@ -110,7 +110,9 @@ export default function GestanteLoginPage() {
             />
           </div>
           <p className="text-sm text-white/70">Programa Mãe Salvador</p>
-          <p className="text-sm text-white/50 mt-1">SMS &mdash; Caderneta Digital</p>
+          <p className="text-sm text-white/50 mt-1">
+            SMS &mdash; Caderneta Digital
+          </p>
         </div>
 
         <Card className="bg-white/95 backdrop-blur shadow-2xl shadow-black/20 border-0">
@@ -137,7 +139,7 @@ export default function GestanteLoginPage() {
                 type="text"
                 inputMode="numeric"
                 maxLength={15}
-                placeholder="Apenas números (11 ou 15 dígitos)"
+                placeholder="11 ou 15 dígitos"
                 value={cpfCns}
                 onChange={(e) => {
                   setCpfCns(e.target.value.replace(/\D/g, "").slice(0, 15));
@@ -195,7 +197,12 @@ export default function GestanteLoginPage() {
               >
                 Criar conta
               </Button>
-              <Button type="button" className="flex-1" onClick={handleEntrar} disabled={carregando}>
+              <Button
+                type="button"
+                className="flex-1"
+                onClick={handleEntrar}
+                disabled={carregando}
+              >
                 {carregando ? "Entrando…" : "Entrar"}
               </Button>
             </div>

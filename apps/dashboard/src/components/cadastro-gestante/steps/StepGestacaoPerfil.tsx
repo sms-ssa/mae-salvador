@@ -10,7 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import type { FormCadastroGestante } from "../validators/validacoesCadastroGestante";
 
 interface StepGestacaoPerfilProps {
@@ -144,46 +143,36 @@ export function StepGestacaoPerfil({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Plano de saúde ou particular?</Label>
-              <Select
-                value={form.planoSaude}
-                onValueChange={(v) => updateField("planoSaude", v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sim">Sim</SelectItem>
-                  <SelectItem value="nao">Não</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {form.planoSaude === "sim" && (
-              <div className="space-y-2">
-                <Label>Deseja manter acompanhamento na UBS?</Label>
-                <Select
-                  value={form.manterAcompanhamentoUbs}
-                  onValueChange={(v) => updateField("manterAcompanhamentoUbs", v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="sim">Sim</SelectItem>
-                    <SelectItem value="nao">Não</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="plano-saude"
+                    checked={form.planoSaude === "sim"}
+                    onChange={() => updateField("planoSaude", "sim")}
+                    className="rounded-full"
+                  />
+                  <span className="text-sm">Sim</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="plano-saude"
+                    checked={form.planoSaude === "nao"}
+                    onChange={() => updateField("planoSaude", "nao")}
+                    className="rounded-full"
+                  />
+                  <span className="text-sm">Não</span>
+                </label>
               </div>
-            )}
+            </div>
           </div>
         </CardContent>
       </Card>
 
       <Card className="bg-muted/30 border-0 shadow-none">
         <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <CardTitle className="text-sm">Antecedentes Obstétricos</CardTitle>
-            <Badge variant="outline" className="text-[10px] font-normal">Facultativo</Badge>
-          </div>
+          <CardTitle className="text-sm">Antecedentes Obstétricos</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -245,10 +234,7 @@ export function StepGestacaoPerfil({
 
       <Card className="bg-muted/30 border-0 shadow-none">
         <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <CardTitle className="text-sm">Informações de Saúde</CardTitle>
-            <Badge variant="outline" className="text-[10px] font-normal">Facultativo</Badge>
-          </div>
+          <CardTitle className="text-sm">Informações de Saúde</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">

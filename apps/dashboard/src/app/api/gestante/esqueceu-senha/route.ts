@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { getAppPool, isAppDatabaseConfigured } from "@/lib/db";
 import { hashSenha } from "@/lib/senha";
+import { validarCpfOuCns } from "@/lib/validacoes-login";
 
 function onlyDigits(s: string, maxLen: number): string {
   return (s ?? "").replace(/\D/g, "").slice(0, maxLen);
@@ -116,8 +117,7 @@ function gerarOpcoes(correta: string, tipo: string): { id: string; texto: string
     nome: ["Ana Maria Santos", "Fernanda Oliveira", "Carla Souza Lima", "Patrícia Costa", "Juliana Ferreira"],
     nomeMae: ["Maria da Silva", "Ana Paula Oliveira", "Francisca Santos", "Tereza Costa", "Antônia Lima"],
     nomePai: ["José da Silva", "Carlos Oliveira", "Antônio Souza", "Roberto Lima", "João Ferreira"],
-    data: ["1990-05-15", "1988-11-20", "1992-03-10", "1985-07-22", "1995-01-08"],
-    municipioNascimento: ["SALVADOR", "FEIRA DE SANTANA", "CAMAÇARI", "LAURO DE FREITAS", "ILHEUS"],
+    data: ["15/05/1990", "20/11/1988", "10/03/1992", "22/07/1985", "08/01/1995"],
   };
   const falsas = (opcoesFalsas[tipo] ?? opcoesFalsas.nome).filter((x) => x !== correta);
   while (falsas.length < 2) falsas.push(`Opção ${falsas.length + 1}`);
@@ -130,6 +130,12 @@ function gerarOpcoes(correta: string, tipo: string): { id: string; texto: string
 }
 
 type Pool = Awaited<ReturnType<typeof getAppPool>>;
+function formatDateBr(iso: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
+
 async function obterNovaPergunta(
   pool: Pool,
   cpfCns: string,
@@ -152,10 +158,8 @@ async function obterNovaPergunta(
     { id: "nomeMae_alt", pergunta: "Informe o nome da mãe cadastrado.", valor: (row.nome_mae ?? "").trim(), tipoBase: "nomeMae" },
     { id: "nomePai", pergunta: "Qual o nome do pai?", valor: (row.nome_pai ?? "").trim(), tipoBase: "nomePai" },
     { id: "nomePai_alt", pergunta: "Informe o nome do pai cadastrado.", valor: (row.nome_pai ?? "").trim(), tipoBase: "nomePai" },
-    { id: "data", pergunta: "Qual a data de nascimento?", valor: row.data_nascimento ? row.data_nascimento.toISOString().slice(0, 10) : "", tipoBase: "data" },
-    { id: "data_alt", pergunta: "Informe a data de nascimento cadastrada.", valor: row.data_nascimento ? row.data_nascimento.toISOString().slice(0, 10) : "", tipoBase: "data" },
-    { id: "municipioNascimento", pergunta: "Qual o município de nascimento?", valor: (row.municipio_nascimento ?? "").trim(), tipoBase: "municipioNascimento" },
-    { id: "municipioNascimento_alt", pergunta: "Em qual município você nasceu?", valor: (row.municipio_nascimento ?? "").trim(), tipoBase: "municipioNascimento" },
+    { id: "data", pergunta: "Qual a data de nascimento?", valor: row.data_nascimento ? formatDateBr(row.data_nascimento.toISOString().slice(0, 10)) : "", tipoBase: "data" },
+    { id: "data_alt", pergunta: "Informe a data de nascimento cadastrada.", valor: row.data_nascimento ? formatDateBr(row.data_nascimento.toISOString().slice(0, 10)) : "", tipoBase: "data" },
   ].filter((t) => t.valor && t.valor !== "IGNORADA" && t.valor !== "IGNORADO");
   if (tipos.length === 0) return null;
   const tiposSemRepetir = tipos.filter(
@@ -181,9 +185,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ erro: "Serviço indisponível." }, { status: 503 });
   }
   const cpfCns = onlyDigits(request.nextUrl.searchParams.get("cpfCns") ?? "", 15);
-  if (cpfCns.length !== 11 && cpfCns.length !== 15) {
+  if (validarCpfOuCns(cpfCns)) {
     return NextResponse.json(
-      { erro: "Informe CPF (11 dígitos) ou CNS (15 dígitos)." },
+      { erro: "CPF ou CNS inválido." },
       { status: 400 }
     );
   }
@@ -235,8 +239,11 @@ export async function POST(request: NextRequest) {
   if (etapa === "verificar") {
     const cpfCns = onlyDigits(String(body.cpfCns ?? ""), 15);
     const opcaoId = String(body.opcaoId ?? "").trim();
-    if (!cpfCns || !opcaoId) {
+    if (!opcaoId) {
       return NextResponse.json({ ok: false, erro: "CPF/CNS e opção são obrigatórios." }, { status: 400 });
+    }
+    if (validarCpfOuCns(cpfCns)) {
+      return NextResponse.json({ ok: false, erro: "CPF ou CNS inválido." }, { status: 400 });
     }
     const pool = getAppPool();
     if (await isBloqueado(pool, cpfCns)) {
