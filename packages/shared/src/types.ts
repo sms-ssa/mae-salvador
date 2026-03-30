@@ -65,6 +65,7 @@ export interface PacienteBaseFederal {
   bairro?: string | null;
   cep?: string | null;
   municipio?: string | null;
+  tipoLogradouro?: string | null;
   emails?: string | null;
   ddd?: string | null;
   telefoneCelular?: string | null;
@@ -104,6 +105,7 @@ export interface CitizenDto {
   email?: string | null;
   cep?: string | null;
   logradouro?: string | null;
+  tipoLogradouro?: string | null;
   numero?: string | null;
   complemento?: string | null;
   bairro?: string | null;
@@ -134,6 +136,7 @@ export interface DadosPessoaisFromFederal {
   identidadeGenero?: string;
   orientacaoSexual?: string;
   logradouro: string;
+  tipoLogradouro?: string;
   numero: string;
   complemento?: string;
   bairro: string;

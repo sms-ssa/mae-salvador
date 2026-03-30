@@ -52,7 +52,6 @@ async function main() {
       if (r.rows.length === 0) {
         const safeName = '"' + dbName.replace(/"/g, '""') + '"';
         await admin.query("CREATE DATABASE " + safeName);
-        console.log("Banco criado:", dbName);
       }
       await admin.end();
     }
@@ -79,11 +78,8 @@ async function main() {
     const dir = join(__dirname, "migrations");
     for (const file of migrations) {
       const sql = readFileSync(join(dir, file), "utf8");
-      console.log(`Executando ${file}...`);
       await client.query(sql);
-      console.log(`  OK: ${file}`);
     }
-    console.log("Migrations concluídas.");
   } catch (err) {
     console.error("Erro:", err.message);
     process.exit(1);

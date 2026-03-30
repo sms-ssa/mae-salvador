@@ -64,6 +64,7 @@ export function mapPacienteBaseFederalToDadosCadastro(
   const dataNascimento = toISODate(paciente.dataNascimento);
   const sexo = mapSexo(paciente.sexo != null ? String(paciente.sexo) : undefined);
   const logradouro = trim(paciente.logradouro);
+  const tipoLogradouro = trim(paciente.tipoLogradouro) || undefined;
   const numero = trim(paciente.numero);
   const complemento = trim(paciente.complemento) || undefined;
   const bairro = trim(paciente.bairro);
@@ -91,6 +92,7 @@ export function mapPacienteBaseFederalToDadosCadastro(
   if (identidadeGenero) out.identidadeGenero = identidadeGenero;
   if (orientacaoSexual) out.orientacaoSexual = orientacaoSexual;
   if (logradouro) out.logradouro = logradouro.slice(0, 200);
+  if (tipoLogradouro) out.tipoLogradouro = tipoLogradouro.slice(0, 100);
   if (numero) out.numero = numero.slice(0, 20);
   if (complemento) out.complemento = complemento.slice(0, 50);
   if (bairro) out.bairro = bairro.slice(0, 100);
@@ -125,6 +127,7 @@ export function citizenDtoToPacienteBaseFederal(
     identidadeGenero: trim(dto.identidadeGenero) ?? undefined,
     orientacaoSexual: trim(dto.orientacaoSexual) ?? undefined,
     logradouro: trim(dto.logradouro) ?? undefined,
+    tipoLogradouro: trim(dto.tipoLogradouro) ?? undefined,
     numero: trim(dto.numero) ?? undefined,
     complemento: trim(dto.complemento) ?? undefined,
     bairro: trim(dto.bairro) ?? undefined,

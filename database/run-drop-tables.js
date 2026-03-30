@@ -39,7 +39,6 @@ async function main() {
   try {
     await client.connect();
     await client.query(sql);
-    console.log("Tabelas removidas. Agora rode: npm run db:migrate");
   } catch (err) {
     console.error("Erro:", err.message);
     process.exit(1);
