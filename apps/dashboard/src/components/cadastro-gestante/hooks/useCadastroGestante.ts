@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { mapPacienteBaseFederalToDadosCadastro } from "@mae-salvador/shared";
+import { validarCPF } from "@/lib/validacoes-login";
 import {
   type FormCadastroGestante,
   validarStep1,
@@ -293,6 +294,7 @@ export function useCadastroGestante() {
   const [form, setForm] = useState<FormCadastroGestante>(INITIAL_FORM);
   const [erroEnvio, setErroEnvio] = useState("");
   const [erroNotificacao, setErroNotificacao] = useState("");
+  const [cpfJaCadastrado, setCpfJaCadastrado] = useState(false);
   const [erroCep, setErroCep] = useState("");
   const [erroDum, setErroDum] = useState("");
   const [erroSenha, setErroSenha] = useState("");
@@ -313,6 +315,7 @@ export function useCadastroGestante() {
       key: K,
       value: FormCadastroGestante[K],
     ) => {
+      if (key === "cns") return;
       setForm((prev) => {
         const next = { ...prev, [key]: value };
         if (key === "nomeMaeIgnorada") {
@@ -365,6 +368,51 @@ export function useCadastroGestante() {
     },
     [],
   );
+
+  useEffect(() => {
+    const cpfDigits = form.cpf.replace(/\D/g, "").slice(0, 11);
+    if (cpfDigits.length !== 11 || validarCPF(form.cpf)) {
+      setCpfJaCadastrado(false);
+      return;
+    }
+    let ativo = true;
+    const ctrl = new AbortController();
+    const verificarCpfDuplicado = async () => {
+      try {
+        const res = await fetch(
+          `/api/gestante/verificar?cpf=${encodeURIComponent(cpfDigits)}`,
+          { signal: ctrl.signal },
+        );
+        const data = (await res.json().catch(() => ({}))) as {
+          existe?: boolean;
+        };
+        if (!ativo) return;
+        setCpfJaCadastrado(Boolean(data.existe));
+      } catch {
+        if (!ativo) return;
+        setCpfJaCadastrado(false);
+      }
+    };
+    void verificarCpfDuplicado();
+    return () => {
+      ativo = false;
+      ctrl.abort();
+    };
+  }, [form.cpf]);
+
+  useEffect(() => {
+    if (cpfJaCadastrado) {
+      setErroNotificacao(
+        "O cadastro deste usuário já existe. Faça login ou use Esqueceu Senha.",
+      );
+      return;
+    }
+    setErroNotificacao((prev) =>
+      prev === "O cadastro deste usuário já existe. Faça login ou use Esqueceu Senha."
+        ? ""
+        : prev,
+    );
+  }, [cpfJaCadastrado]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -538,7 +586,7 @@ export function useCadastroGestante() {
     }
   }, [exigeConfirmacaoMunicipio, respostaMunicipioForaSalvador]);
 
-  const canSubmitStep1 = validarStep1(form);
+  const canSubmitStep1 = validarStep1(form) && !cpfJaCadastrado;
   const canSubmitStep2 =
     validarStep2(form) &&
     (!exigeConfirmacaoMunicipio || respostaMunicipioForaSalvador === "sim");
@@ -554,6 +602,9 @@ export function useCadastroGestante() {
       base.push(
         "Confirmação dos critérios do Programa Mãe Salvador para município de residência diferente de Salvador",
       );
+    }
+    if (etapa === 1 && cpfJaCadastrado) {
+      base.push("CPF já cadastrado");
     }
     return base;
   })();

@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
-  const cpfInserir = cpfValido ? cpfRaw : "";
+  const cpfInserir = cpfValido ? cpfRaw : `SEMCPF-${cnsRaw}`;
   if (senha && (senha.length < 6 || senha.length > 15)) {
     return NextResponse.json(
       { ok: false, erro: "A senha deve ter entre 6 e 15 caracteres." },
@@ -226,6 +226,41 @@ export async function POST(request: NextRequest) {
     );
   }
   const pool = getAppPool();
+  if (cpfValido) {
+    const cpfExistente = await pool.query<{ id: string }>(
+      `SELECT id FROM gestante_cadastro
+       WHERE REPLACE(REPLACE(REPLACE(COALESCE(cpf, '')::text, '.'::text, ''::text), '-'::text, ''::text), ' '::text, ''::text) = $1
+       LIMIT 1`,
+      [cpfRaw],
+    );
+    if (cpfExistente.rows.length > 0) {
+      return NextResponse.json(
+        {
+          ok: false,
+          erro: "O cadastro deste usuário já existe. Faça login ou use Esqueceu Senha.",
+        },
+        { status: 409 },
+      );
+    }
+  }
+  if (cnsValido) {
+    const cnsExistente = await pool.query<{ id: string }>(
+      `SELECT id FROM gestante_cadastro
+       WHERE cns IS NOT NULL
+         AND REPLACE(REPLACE(REPLACE(COALESCE(cns, '')::text, '.'::text, ''::text), '-'::text, ''::text), ' '::text, ''::text) = $1
+       LIMIT 1`,
+      [cnsRaw],
+    );
+    if (cnsExistente.rows.length > 0) {
+      return NextResponse.json(
+        {
+          ok: false,
+          erro: "O cadastro deste usuário já existe. Faça login ou use Esqueceu Senha.",
+        },
+        { status: 409 },
+      );
+    }
+  }
   const programasRes = await pool.query<{ id: string; codigo: string }>(
     `SELECT id, codigo FROM programa_social WHERE id = ANY($1::uuid[])`,
     [programaSocialIds],

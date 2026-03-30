@@ -14,7 +14,10 @@ import type { FormCadastroGestante } from "../validators/validacoesCadastroGesta
 
 interface StepGestacaoPerfilProps {
   form: FormCadastroGestante;
-  updateField: <K extends keyof FormCadastroGestante>(key: K, value: FormCadastroGestante[K]) => void;
+  updateField: <K extends keyof FormCadastroGestante>(
+    key: K,
+    value: FormCadastroGestante[K],
+  ) => void;
   erroDum: string;
   programasSociais: Array<{ id: string; codigo: string; label: string }>;
 }
@@ -34,7 +37,10 @@ export function StepGestacaoPerfil({
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Como descobriu a gestação <span className="text-red-500">*</span></Label>
+              <Label>
+                Como descobriu a gestação{" "}
+                <span className="text-red-500">*</span>
+              </Label>
               <Select
                 value={form.descobrimento}
                 onValueChange={(v) => updateField("descobrimento", v)}
@@ -45,7 +51,9 @@ export function StepGestacaoPerfil({
                 <SelectContent>
                   <SelectItem value="teste-rapido">Teste rápido</SelectItem>
                   <SelectItem value="beta-hcg">Beta-HCG (Sangue)</SelectItem>
-                  <SelectItem value="atraso-menstrual">Atraso Menstrual</SelectItem>
+                  <SelectItem value="atraso-menstrual">
+                    Atraso Menstrual
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -62,18 +70,21 @@ export function StepGestacaoPerfil({
               {erroDum && <p className="text-sm text-destructive">{erroDum}</p>}
             </div>
           </div>
-
         </CardContent>
       </Card>
 
       <Card className="bg-muted/30 border-0 shadow-none">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Perfil Social e Assistencial</CardTitle>
+          <CardTitle className="text-sm">
+            Perfil Social e Assistencial
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Programa social <span className="text-red-500">*</span></Label>
+              <Label>
+                Programa social <span className="text-red-500">*</span>
+              </Label>
               <div className="flex flex-wrap gap-2">
                 {programasSociais.map((op) => {
                   const checkboxId = `programa-social-${op.codigo}`;
@@ -88,14 +99,21 @@ export function StepGestacaoPerfil({
                           const checked = e.target.checked;
                           const current = form.programaSocial;
                           if (op.codigo === "nenhum") {
-                            updateField("programaSocial", checked ? ["nenhum"] : []);
+                            updateField(
+                              "programaSocial",
+                              checked ? ["nenhum"] : [],
+                            );
                             return;
                           }
-                          const withoutNenhum = current.filter((v) => v !== "nenhum");
+                          const withoutNenhum = current.filter(
+                            (v) => v !== "nenhum",
+                          );
                           if (checked) {
                             updateField(
                               "programaSocial",
-                              Array.from(new Set([...withoutNenhum, op.codigo])),
+                              Array.from(
+                                new Set([...withoutNenhum, op.codigo]),
+                              ),
                             );
                           } else {
                             updateField(
@@ -111,7 +129,9 @@ export function StepGestacaoPerfil({
                         className="cursor-pointer select-none rounded-md border px-3 py-2 text-sm font-medium transition-colors
                           bg-background hover:bg-muted/40
                           peer-checked:border-primary/50 peer-checked:bg-primary/10"
-                        title={op.codigo === "nenhum" ? "Opção exclusiva" : undefined}
+                        title={
+                          op.codigo === "nenhum" ? "Opção exclusiva" : undefined
+                        }
                       >
                         {op.label}
                       </Label>
@@ -125,17 +145,32 @@ export function StepGestacaoPerfil({
             </div>
             {form.programaSocial.includes("bolsa-familia") && (
               <div className="space-y-2">
-                <Label htmlFor="nis">NIS <span className="text-red-500">*</span></Label>
+                <Label htmlFor="nis">
+                  NIS <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="nis"
                   placeholder="11 dígitos"
                   value={form.nis}
-                  onChange={(e) => updateField("nis", e.target.value.replace(/\D/g, "").slice(0, 11))}
+                  onChange={(e) =>
+                    updateField(
+                      "nis",
+                      e.target.value.replace(/\D/g, "").slice(0, 11),
+                    )
+                  }
                   maxLength={11}
                   inputMode="numeric"
-                  className={form.programaSocial.includes("bolsa-familia") && form.nis.replace(/\D/g, "").length > 0 && form.nis.replace(/\D/g, "").length !== 11 ? "border-destructive" : ""}
+                  className={
+                    form.programaSocial.includes("bolsa-familia") &&
+                    form.nis.replace(/\D/g, "").length > 0 &&
+                    form.nis.replace(/\D/g, "").length !== 11
+                      ? "border-destructive"
+                      : ""
+                  }
                 />
-                <p className="text-[10px] text-muted-foreground">Obrigatório para Bolsa Família (11 dígitos).</p>
+                <p className="text-[10px] text-muted-foreground">
+                  Obrigatório para Bolsa Família (11 dígitos).
+                </p>
               </div>
             )}
           </div>
@@ -185,7 +220,12 @@ export function StepGestacaoPerfil({
                 max={99}
                 placeholder="0"
                 value={form.gestacoesPrevias}
-                onChange={(e) => updateField("gestacoesPrevias", e.target.value.replace(/\D/g, "").slice(0, 2))}
+                onChange={(e) =>
+                  updateField(
+                    "gestacoesPrevias",
+                    e.target.value.replace(/\D/g, "").slice(0, 2),
+                  )
+                }
               />
               <p className="text-[10px] text-muted-foreground">Até 2 dígitos</p>
             </div>
@@ -198,7 +238,12 @@ export function StepGestacaoPerfil({
                 max={99}
                 placeholder="0"
                 value={form.partosCesareo}
-                onChange={(e) => updateField("partosCesareo", e.target.value.replace(/\D/g, "").slice(0, 2))}
+                onChange={(e) =>
+                  updateField(
+                    "partosCesareo",
+                    e.target.value.replace(/\D/g, "").slice(0, 2),
+                  )
+                }
               />
               <p className="text-[10px] text-muted-foreground">Até 2 dígitos</p>
             </div>
@@ -211,7 +256,12 @@ export function StepGestacaoPerfil({
                 max={99}
                 placeholder="0"
                 value={form.partosNormal}
-                onChange={(e) => updateField("partosNormal", e.target.value.replace(/\D/g, "").slice(0, 2))}
+                onChange={(e) =>
+                  updateField(
+                    "partosNormal",
+                    e.target.value.replace(/\D/g, "").slice(0, 2),
+                  )
+                }
               />
               <p className="text-[10px] text-muted-foreground">Até 2 dígitos</p>
             </div>
@@ -224,7 +274,12 @@ export function StepGestacaoPerfil({
                 max={99}
                 placeholder="0"
                 value={form.abortos}
-                onChange={(e) => updateField("abortos", e.target.value.replace(/\D/g, "").slice(0, 2))}
+                onChange={(e) =>
+                  updateField(
+                    "abortos",
+                    e.target.value.replace(/\D/g, "").slice(0, 2),
+                  )
+                }
               />
               <p className="text-[10px] text-muted-foreground">Até 2 dígitos</p>
             </div>
@@ -263,7 +318,7 @@ export function StepGestacaoPerfil({
             </div>
           </div>
           <div className="space-y-2">
-            <Label>Doenças conhecidas (antecedentes)?</Label>
+            <Label>Doenças preexistentes</Label>
             <div className="flex gap-4">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input

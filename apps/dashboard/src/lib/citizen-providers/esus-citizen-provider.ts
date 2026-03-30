@@ -148,6 +148,10 @@ function normalizeForILike(s: string): string {
   return s.trim().replace(/\s{2,}/g, " ");
 }
 
+function normalizeSqlExpr(expr: string): string {
+  return `translate(upper(${expr}), 'ÁÀÃÂÄÉÈÊËÍÌÎÏÓÒÕÔÖÚÙÛÜÇ', 'AAAAAEEEEIIIIOOOOOUUUUC')`;
+}
+
 /**
  * Busca cidadão na PEC (e-SUS) por nome e data de nascimento.
  * - Retorna `null` se não configurado, não encontrar ou der erro.
@@ -168,28 +172,38 @@ export async function getCitizenByNomeAndDataNascimento(params: {
   const pool = getEsusPool();
   if (!pool) return null;
 
-  const where: string[] = ["c.st_ativo = 1"];
-  const queryParams: unknown[] = [];
-  let idx = 1;
+  const runQuery = async (activeOnly: boolean) => {
+    const where: string[] = [activeOnly ? "c.st_ativo = 1" : "TRUE"];
+    const queryParams: unknown[] = [];
+    let idx = 1;
 
-  where.push(`c.no_cidadao ILIKE $${idx}`);
-  queryParams.push(`%${nomeNorm}%`);
-  idx += 1;
-
-  if (dataNascimento && /^\d{4}-\d{2}-\d{2}$/.test(dataNascimento.trim())) {
-    where.push(`c.dt_nascimento::date = $${idx}::date`);
-    queryParams.push(dataNascimento.trim());
+    const nomeParam = `$${idx}`;
+    where.push(
+      `${normalizeSqlExpr("c.no_cidadao")} ILIKE '%' || ${normalizeSqlExpr(
+        nomeParam,
+      )} || '%'`,
+    );
+    queryParams.push(nomeNorm);
     idx += 1;
-  }
 
-  if (nomeMae && nomeMae.trim()) {
-    const maeNorm = normalizeForILike(nomeMae);
-    where.push(`c.no_mae ILIKE $${idx}`);
-    queryParams.push(`%${maeNorm}%`);
-    idx += 1;
-  }
+    if (dataNascimento && /^\d{4}-\d{2}-\d{2}$/.test(dataNascimento.trim())) {
+      where.push(`c.dt_nascimento::date = $${idx}::date`);
+      queryParams.push(dataNascimento.trim());
+      idx += 1;
+    }
 
-  try {
+    if (nomeMae && nomeMae.trim()) {
+      const maeNorm = normalizeForILike(nomeMae);
+      const maeParam = `$${idx}`;
+      where.push(
+        `${normalizeSqlExpr("c.no_mae")} ILIKE '%' || ${normalizeSqlExpr(
+          maeParam,
+        )} || '%'`,
+      );
+      queryParams.push(maeNorm);
+      idx += 1;
+    }
+
     const query = `
       SELECT
         c.nu_cns,
@@ -218,7 +232,6 @@ export async function getCitizenByNomeAndDataNascimento(params: {
       WHERE ${where.join(" AND ")}
       LIMIT 1
     `;
-
     const result = await pool.query(query, queryParams);
     const row = result.rows?.[0] as Record<string, unknown> | undefined;
     if (!row) return null;
@@ -248,6 +261,12 @@ export async function getCitizenByNomeAndDataNascimento(params: {
     };
 
     return dto;
+  };
+
+  try {
+    const ativo = await runQuery(true);
+    if (ativo) return ativo;
+    return await runQuery(false);
   } catch {
     return null;
   }

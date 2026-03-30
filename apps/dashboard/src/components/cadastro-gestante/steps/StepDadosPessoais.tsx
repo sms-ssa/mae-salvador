@@ -103,19 +103,17 @@ export function StepDadosPessoais({
               id="cns"
               placeholder="Cartão Nacional de Saúde"
               value={form.cns}
-              onChange={(e) =>
-                updateField(
-                  "cns",
-                  e.target.value.replace(/\D/g, "").slice(0, 15),
-                )
-              }
+              onChange={() => {}}
               maxLength={15}
               className={erros.cns ? "border-destructive" : ""}
-              disabled={pacienteLocalizado}
+              disabled
             />
             {erros.cns && (
               <p className="text-sm text-destructive">{erros.cns}</p>
             )}
+            <p className="text-xs text-muted-foreground">
+              O CNS é preenchido automaticamente pela busca do cidadão.
+            </p>
           </div>
         </div>
 
