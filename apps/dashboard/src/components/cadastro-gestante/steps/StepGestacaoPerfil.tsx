@@ -318,7 +318,7 @@ export function StepGestacaoPerfil({
             </div>
           </div>
           <div className="space-y-2">
-            <Label>Doenças preexistentes</Label>
+            <Label>Doenças preexistentes?</Label>
             <div className="flex gap-4">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input

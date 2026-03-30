@@ -98,7 +98,9 @@ export const esusCitizenProvider: ICitizenProvider = {
       LIMIT 1
     `;
 
-    const tryQuery = async (activeOnly: boolean): Promise<Record<string, unknown> | undefined> => {
+    const tryQuery = async (
+      activeOnly: boolean,
+    ): Promise<Record<string, unknown> | undefined> => {
       const query = buildQuery(activeOnly);
       const result = await pool.query(query, [doc]);
       return result.rows?.[0] as Record<string, unknown> | undefined;
@@ -137,8 +139,10 @@ export const esusCitizenProvider: ICitizenProvider = {
         municipio: trim(get("municipio")) ?? undefined,
       };
       return dto;
-    } catch {
-      return null;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Falha ao consultar e-SUS PEC.";
+      throw new Error(`ESUS_UNAVAILABLE: ${message}`);
     }
   },
 };
@@ -267,7 +271,9 @@ export async function getCitizenByNomeAndDataNascimento(params: {
     const ativo = await runQuery(true);
     if (ativo) return ativo;
     return await runQuery(false);
-  } catch {
-    return null;
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Falha ao consultar e-SUS PEC.";
+    throw new Error(`ESUS_UNAVAILABLE: ${message}`);
   }
 }

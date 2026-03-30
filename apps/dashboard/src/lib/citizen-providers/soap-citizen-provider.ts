@@ -24,6 +24,16 @@ function toISODate(s: string | null | undefined): string | null {
   return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
 }
 
+function isNotFoundMensagem(mensagem: string | null | undefined): boolean {
+  const m = (mensagem ?? "")
+    .trim()
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (!m) return false;
+  return m.includes("NAO ENCONTRADO") || m.includes("NAO LOCALIZADO");
+}
+
 /** Converte PacienteBaseFederal (resposta SOAP) para CitizenDto. */
 function pacienteToCitizenDto(p: {
   cpf?: string | null;
@@ -92,12 +102,26 @@ export const soapCitizenProvider: ICitizenProvider = {
     const doc = document.replace(/\D/g, "");
     if (doc.length === 11) {
       const resultado = await pesquisarPacientePorCpf(document);
-      if (!resultado.sucesso || !resultado.paciente) return null;
+      if (!resultado.sucesso || !resultado.paciente) {
+        if (isNotFoundMensagem(resultado.mensagem)) return null;
+        throw new Error(
+          `CADWEB_UNAVAILABLE: ${
+            resultado.mensagem ?? "Falha ao consultar serviço federal."
+          }`,
+        );
+      }
       return pacienteToCitizenDto(resultado.paciente);
     }
     if (doc.length === 15) {
       const resultado = await pesquisarPacientePorCns(document);
-      if (!resultado.sucesso || !resultado.paciente) return null;
+      if (!resultado.sucesso || !resultado.paciente) {
+        if (isNotFoundMensagem(resultado.mensagem)) return null;
+        throw new Error(
+          `CADWEB_UNAVAILABLE: ${
+            resultado.mensagem ?? "Falha ao consultar serviço federal."
+          }`,
+        );
+      }
       return pacienteToCitizenDto(resultado.paciente);
     }
     return null;

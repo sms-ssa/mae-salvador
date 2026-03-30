@@ -84,7 +84,6 @@ export function StepContatoEndereco({
                 maxLength={2}
                 inputMode="numeric"
               />
-              <p className="text-[10px] text-muted-foreground">2 dígitos</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="celular">Telefone celular principal</Label>
@@ -146,7 +145,6 @@ export function StepContatoEndereco({
                 maxLength={2}
                 inputMode="numeric"
               />
-              <p className="text-[10px] text-muted-foreground">2 dígitos</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="tel-alt">Telefone celular alternativo</Label>

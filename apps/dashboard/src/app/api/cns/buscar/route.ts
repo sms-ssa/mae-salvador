@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { citizenDtoToPacienteBaseFederal } from "@mae-salvador/shared";
 import { isCnsFederalConfigured } from "@/lib/cns-federal";
-import { getCitizenByCpfOrCns } from "@/lib/citizen-lookup-service";
+import { getCitizenByCpfOrCnsWithDiagnostics } from "@/lib/citizen-lookup-service";
 
 /**
  * GET /api/cns/buscar?cpf=... ou ?cns=...
@@ -30,21 +30,34 @@ export async function GET(request: NextRequest) {
   const cnsConfigurado = isCnsFederalConfigured();
 
   try {
-    const citizen = await getCitizenByCpfOrCns(doc);
+    const { citizen, esusIndisponivel, cadwebIndisponivel } =
+      await getCitizenByCpfOrCnsWithDiagnostics(doc);
     const paciente = citizenDtoToPacienteBaseFederal(citizen);
     if (paciente) {
       return NextResponse.json({
         cnsConfigurado,
         sucesso: true,
         paciente,
+        fontesIndisponiveis: false,
 
         citizen,
+      });
+    }
+    if (esusIndisponivel && cadwebIndisponivel) {
+      return NextResponse.json({
+        cnsConfigurado,
+        sucesso: false,
+        paciente: null,
+        fontesIndisponiveis: true,
+        mensagem:
+          "No momento, não foi possível acessar o e-SUS PEC e o CadWeb. Verifique sua conexão e tente novamente em alguns minutos.",
       });
     }
     return NextResponse.json({
       cnsConfigurado,
       sucesso: false,
       paciente: null,
+      fontesIndisponiveis: false,
       mensagem: cnsConfigurado
         ? "Cidadão não encontrado na base e-SUS nem no CADSUS."
         : "Cidadão não encontrado na base e-SUS. (Integração CNS Federal não configurada.)",
@@ -56,6 +69,7 @@ export async function GET(request: NextRequest) {
         cnsConfigurado,
         sucesso: false,
         paciente: null,
+        fontesIndisponiveis: false,
         mensagem: message,
       },
       { status: 500 },

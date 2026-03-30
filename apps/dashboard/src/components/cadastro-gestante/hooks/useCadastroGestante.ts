@@ -32,6 +32,7 @@ interface DadosPrefillFromFederal {
   racaCor?: string;
   identidadeGenero?: string;
   orientacaoSexual?: string;
+  tipoLogradouro?: string;
   logradouro?: string;
   numero?: string;
   complemento?: string;
@@ -460,6 +461,9 @@ export function useCadastroGestante() {
         const orientacaoSexualVal = normalizeOrientacaoSexualForSelect(
           dados.orientacaoSexual,
         );
+        const tipoLogradouroVal = normalizeTipoLogradouroForSelect(
+          dados.tipoLogradouro,
+        );
         const semInformacao = (v: unknown) => {
           if (v == null) return true;
           const s = String(v).trim();
@@ -496,6 +500,7 @@ export function useCadastroGestante() {
           racaCor: racaCorVal || prev.racaCor,
           identidadeGenero: identidadeGeneroVal || prev.identidadeGenero,
           orientacaoSexual: orientacaoSexualVal || prev.orientacaoSexual,
+          tipoLogradouro: tipoLogradouroVal || prev.tipoLogradouro,
           ddd: dddFederal || prev.ddd,
           celularPrincipal: celularFederal || prev.celularPrincipal,
           dddResidencial: dddResFederal || prev.dddResidencial,

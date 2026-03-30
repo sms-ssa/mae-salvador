@@ -18,6 +18,12 @@ function validarNome(nome: string): boolean {
   return RE_NOME.test(nome.replace(/\s/g, " "));
 }
 
+function isFontesIndisponiveis(data: unknown): boolean {
+  if (!data || typeof data !== "object") return false;
+  const value = (data as { fontesIndisponiveis?: unknown }).fontesIndisponiveis;
+  return value === true;
+}
+
 /**
  * Pesquisa do(a) Cidadão(ã) (requisitos itens 3 e 4).
  * CPF → Pesquisar; "Não Possui" → busca alternativa (CNS ou Dados do Paciente).
@@ -95,6 +101,15 @@ export default function PesquisaCidadaoPage() {
       }
       const res = await fetch(`/api/cns/buscar?cpf=${encodeURIComponent(dig)}`);
       const data = await res.json().catch(() => ({}));
+      if (isFontesIndisponiveis(data)) {
+        setNotificacao(
+          data?.mensagem ??
+            "No momento, não foi possível acessar o e-SUS PEC e o CadWeb. Tente novamente em alguns minutos.",
+        );
+        setBuscaAlternativa("cns");
+        setCarregando(false);
+        return;
+      }
       if (!res.ok) {
         setNotificacao(
           data?.mensagem ??
@@ -179,6 +194,15 @@ export default function PesquisaCidadaoPage() {
       // associado ao CPF e o campo de CNS esteja vazio).
       const res = await fetch(`/api/cns/buscar?cns=${encodeURIComponent(dig)}`);
       const data = await res.json().catch(() => ({}));
+      if (isFontesIndisponiveis(data)) {
+        setNotificacao(
+          data?.mensagem ??
+            "No momento, não foi possível acessar o e-SUS PEC e o CadWeb. Tente novamente em alguns minutos.",
+        );
+        setBuscaAlternativa("cns");
+        setCarregando(false);
+        return;
+      }
       if (data?.sucesso && data?.paciente) {
         const payload = data.paciente ?? data.citizen;
         try {
@@ -244,10 +268,16 @@ export default function PesquisaCidadaoPage() {
         setCarregando(false);
         return;
       }
-
-      router.push("/gestante/cadastrar");
+      setNotificacao(
+        data?.mensagem ??
+          "Cidadão(ã) não localizado(a) no e-SUS PEC nem no CadWeb pelo CNS informado.",
+      );
+      setBuscaAlternativa("dados");
     } catch {
-      router.push("/gestante/cadastrar");
+      setNotificacao(
+        "Não foi possível concluir a busca por CNS neste momento. Tente novamente.",
+      );
+      setBuscaAlternativa("dados");
     }
     setCarregando(false);
   }
@@ -300,6 +330,15 @@ export default function PesquisaCidadaoPage() {
         `/api/cns/buscar-por-dados?${qs.toString()}`,
       );
       const buscaData = await buscaRes.json().catch(() => ({}));
+      if (isFontesIndisponiveis(buscaData)) {
+        setNotificacao(
+          buscaData?.mensagem ??
+            "No momento, não foi possível acessar o e-SUS PEC e o CadWeb. Tente novamente em alguns minutos.",
+        );
+        setBuscaAlternativa("dados");
+        setCarregando(false);
+        return;
+      }
 
       if (buscaRes.ok && buscaData?.sucesso && buscaData?.citizen) {
         const citizen = buscaData.citizen as {
@@ -414,7 +453,10 @@ export default function PesquisaCidadaoPage() {
         router.push("/gestante/cadastrar?fromDados=1");
       }
     } catch {
-      router.push("/gestante/cadastrar");
+      setNotificacao(
+        "Não foi possível concluir a busca neste momento. Tente novamente.",
+      );
+      setBuscaAlternativa("dados");
     }
     setCarregando(false);
   }

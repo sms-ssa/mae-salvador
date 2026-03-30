@@ -19,25 +19,44 @@ function onlyDigits(s: string, maxLen: number): string {
 export async function getCitizenByCpfOrCns(
   document: string,
 ): Promise<CitizenDto | null> {
+  const result = await getCitizenByCpfOrCnsWithDiagnostics(document);
+  return result.citizen;
+}
+
+export async function getCitizenByCpfOrCnsWithDiagnostics(
+  document: string,
+): Promise<{
+  citizen: CitizenDto | null;
+  esusIndisponivel: boolean;
+  cadwebIndisponivel: boolean;
+}> {
   const doc = onlyDigits(document, 15);
   if (doc.length !== 11 && doc.length !== 15) {
-    return null;
+    return {
+      citizen: null,
+      esusIndisponivel: false,
+      cadwebIndisponivel: false,
+    };
   }
   let citizen: CitizenDto | null = null;
+  let esusIndisponivel = false;
+  let cadwebIndisponivel = false;
   try {
     citizen = await esusCitizenProvider.getCitizenByCpfOrCns(document);
-    console.log("citizen esus", citizen);
     if (citizen != null) {
-      return citizen;
+      return { citizen, esusIndisponivel, cadwebIndisponivel };
     }
-  } catch {}
+  } catch {
+    esusIndisponivel = true;
+  }
   try {
     citizen = await soapCitizenProvider.getCitizenByCpfOrCns(document);
-    console.log("citizen soap", citizen);
     if (citizen != null) {
-      return citizen;
+      return { citizen, esusIndisponivel, cadwebIndisponivel };
     }
-  } catch {}
+  } catch {
+    cadwebIndisponivel = true;
+  }
 
-  return null;
+  return { citizen: null, esusIndisponivel, cadwebIndisponivel };
 }

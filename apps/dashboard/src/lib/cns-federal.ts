@@ -12,6 +12,7 @@ import type {
   PacienteBaseFederal,
   ResultadoPesquisaBaseFederal,
 } from "@mae-salvador/shared";
+import { mapCadSusCodigoTipoLogradouro } from "@/lib/logradouro-type-mapper";
 
 const DEFAULT_CNS_URL =
   "http://177.20.6.29:8181/JAXWebserviceCnsMS/ServicoCns";
@@ -103,6 +104,42 @@ function buildSoapEnvelopeCns(cns: string): string {
     `    <ns:PesquisarPacientePorCNS xmlns:ns="${CNS_NAMESPACE}">`,
     `      <cns>${escapeXml(cnsLimpo)}</cns>`,
     "    </ns:PesquisarPacientePorCNS>",
+    "  </soap:Body>",
+    "</soap:Envelope>",
+  ].join("\n");
+}
+
+function buildSoapEnvelopeNomeDataNascimento(
+  nome: string,
+  dataNascimento: string,
+): string {
+  const nomeLimpo = nome.trim();
+  const dataIso = dataNascimento.trim().slice(0, 10);
+  const dataSoap = `${dataIso}T00:00:00`;
+  return [
+    '<?xml version="1.0" encoding="utf-8"?>',
+    '<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">',
+    "  <soap:Body>",
+    `    <ns:PesquisarPacientePorNomeDataNascimento xmlns:ns="${CNS_NAMESPACE}">`,
+    `      <nome>${escapeXml(nomeLimpo)}</nome>`,
+    `      <dataNascimento>${escapeXml(dataSoap)}</dataNascimento>`,
+    "    </ns:PesquisarPacientePorNomeDataNascimento>",
+    "  </soap:Body>",
+    "</soap:Envelope>",
+  ].join("\n");
+}
+
+function buildSoapEnvelopeNomeNomeMae(nome: string, nomeMae: string): string {
+  const nomeLimpo = nome.trim();
+  const nomeMaeLimpo = nomeMae.trim();
+  return [
+    '<?xml version="1.0" encoding="utf-8"?>',
+    '<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">',
+    "  <soap:Body>",
+    `    <ns:PesquisarPacientePorNomeNomeMae xmlns:ns="${CNS_NAMESPACE}">`,
+    `      <nome>${escapeXml(nomeLimpo)}</nome>`,
+    `      <nomeMae>${escapeXml(nomeMaeLimpo)}</nomeMae>`,
+    "    </ns:PesquisarPacientePorNomeNomeMae>",
     "  </soap:Body>",
     "</soap:Envelope>",
   ].join("\n");
@@ -258,6 +295,16 @@ function parsePacienteFromBody(bodyXml: string): PacienteBaseFederal {
     ? firstTagValue(endereco, "complemento")
     : null;
   const cepEndereco = endereco ? firstTagValue(endereco, "cep") : null;
+  const municipioEndereco = endereco
+    ? firstTagValue(endereco, "municipioResidencia")
+    : null;
+  const codigoTipoLogradouroEndereco = endereco
+    ? firstTagValue(endereco, "codigoTipoLogradouro")
+    : null;
+  const tipoLogradouroEndereco = mapCadSusCodigoTipoLogradouro(
+    codigoTipoLogradouroEndereco,
+    logradouroEndereco,
+  );
 
   // --- Telefones (prioriza blocos <telefones>) ---
   const telefoneBlocks = extractBlocks(bodyXml, "telefones");
@@ -344,11 +391,23 @@ function parsePacienteFromBody(bodyXml: string): PacienteBaseFederal {
     complemento: complementoEndereco ?? get("complemento", "Complemento") ?? undefined,
     bairro: bairroEndereco ?? get("bairro", "Bairro") ?? undefined,
     cep: cepEndereco ?? get("cep", "Cep", "CEP") ?? undefined,
+    municipio: municipioEndereco ?? get("municipio", "Municipio") ?? undefined,
+    tipoLogradouro: tipoLogradouroEndereco,
     emails: get("emails", "Emails") ?? undefined,
     ddd: get("ddd", "DDD") ?? undefined,
     telefoneCelular: telefoneCelular ?? undefined,
     telefoneResidencial: telefoneResidencial ?? undefined,
   };
+}
+
+function hasPacienteMinimo(
+  paciente: PacienteBaseFederal | null | undefined,
+): paciente is PacienteBaseFederal {
+  if (!paciente) return false;
+  const cpf = (paciente.cpf ?? "").replace(/\D/g, "");
+  const cns = (paciente.cns ?? "").replace(/\D/g, "");
+  const nome = (paciente.nome ?? "").trim();
+  return (cpf.length === 11 || cns.length === 15) && nome.length > 0;
 }
 
 /**
@@ -442,6 +501,13 @@ export async function pesquisarPacientePorCpf(
 
   const inner = responseTag ? responseTag[1].trim() : bodyXml;
   const paciente = parsePacienteFromBody(inner);
+  if (!hasPacienteMinimo(paciente)) {
+    return {
+      sucesso: false,
+      paciente: null,
+      mensagem: "Cidadão não encontrado na base federal para o CPF informado.",
+    };
+  }
 
   return {
     sucesso: true,
@@ -542,6 +608,13 @@ export async function pesquisarPacientePorCns(
 
   const inner = responseTag ? responseTag[1].trim() : bodyXml;
   const paciente = parsePacienteFromBody(inner);
+  if (!hasPacienteMinimo(paciente)) {
+    return {
+      sucesso: false,
+      paciente: null,
+      mensagem: "Cidadão não encontrado na base federal para o CNS informado.",
+    };
+  }
 
   return {
     sucesso: true,
@@ -551,4 +624,171 @@ export async function pesquisarPacientePorCns(
 
 export function isCnsFederalConfigured(): boolean {
   return getConfig().configured;
+}
+
+export async function pesquisarPacientePorNomeDataNascimento(
+  nome: string,
+  dataNascimento: string,
+): Promise<ResultadoPesquisaBaseFederal> {
+  const { url, user, password, configured } = getConfig();
+  if (!configured) {
+    return {
+      sucesso: false,
+      paciente: null,
+      mensagem:
+        "Integração CNS Federal não configurada. Defina CNS_FEDERAL_USER e CNS_FEDERAL_PASSWORD.",
+    };
+  }
+
+  const nomeLimpo = (nome ?? "").trim();
+  const dataLimpa = (dataNascimento ?? "").trim().slice(0, 10);
+  if (!nomeLimpo) {
+    return { sucesso: false, paciente: null, mensagem: "Nome é obrigatório." };
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dataLimpa)) {
+    return {
+      sucesso: false,
+      paciente: null,
+      mensagem: "Data de nascimento inválida.",
+    };
+  }
+
+  const soapEnvelope = buildSoapEnvelopeNomeDataNascimento(nomeLimpo, dataLimpa);
+  const basicAuth = Buffer.from(`${user}:${password}`, "utf-8").toString(
+    "base64",
+  );
+  const headers: Record<string, string> = {
+    "Content-Type": "text/xml; charset=utf-8",
+    Authorization: `Basic ${basicAuth}`,
+    SOAPAction: '""',
+  };
+
+  let res: Response;
+  try {
+    res = await fetch(url, { method: "POST", headers, body: soapEnvelope });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return {
+      sucesso: false,
+      paciente: null,
+      mensagem: `Erro de conexão com o serviço CNS: ${msg}`,
+    };
+  }
+
+  const responseText = await res.text();
+  if (!res.ok) {
+    return {
+      sucesso: false,
+      paciente: null,
+      mensagem: `HTTP ${res.status}: ${responseText.slice(0, 500)}`,
+    };
+  }
+  const fault = parseSoapFault(responseText);
+  if (fault) return { sucesso: false, paciente: null, mensagem: fault };
+  const bodyXml = extractSoapBody(responseText);
+  if (!bodyXml) {
+    return {
+      sucesso: false,
+      paciente: null,
+      mensagem: "Resposta SOAP inválida: Body não encontrado.",
+    };
+  }
+
+  const responseTag =
+    bodyXml.match(
+      /<PesquisarPacientePorNomeDataNascimentoResponse[^>]*>([\s\S]*?)<\/PesquisarPacientePorNomeDataNascimentoResponse>/i,
+    ) ?? bodyXml.match(/<return[^>]*>([\s\S]*?)<\/return>/i);
+  const inner = responseTag ? responseTag[1].trim() : bodyXml;
+  const paciente = parsePacienteFromBody(inner);
+  if (!hasPacienteMinimo(paciente)) {
+    return {
+      sucesso: false,
+      paciente: null,
+      mensagem:
+        "Cidadão não encontrado na base federal para nome e data de nascimento informados.",
+    };
+  }
+  return { sucesso: true, paciente };
+}
+
+export async function pesquisarPacientePorNomeNomeMae(
+  nome: string,
+  nomeMae: string,
+): Promise<ResultadoPesquisaBaseFederal> {
+  const { url, user, password, configured } = getConfig();
+  if (!configured) {
+    return {
+      sucesso: false,
+      paciente: null,
+      mensagem:
+        "Integração CNS Federal não configurada. Defina CNS_FEDERAL_USER e CNS_FEDERAL_PASSWORD.",
+    };
+  }
+
+  const nomeLimpo = (nome ?? "").trim();
+  const nomeMaeLimpo = (nomeMae ?? "").trim();
+  if (!nomeLimpo || !nomeMaeLimpo) {
+    return {
+      sucesso: false,
+      paciente: null,
+      mensagem: "Nome e nome da mãe são obrigatórios.",
+    };
+  }
+
+  const soapEnvelope = buildSoapEnvelopeNomeNomeMae(nomeLimpo, nomeMaeLimpo);
+  const basicAuth = Buffer.from(`${user}:${password}`, "utf-8").toString(
+    "base64",
+  );
+  const headers: Record<string, string> = {
+    "Content-Type": "text/xml; charset=utf-8",
+    Authorization: `Basic ${basicAuth}`,
+    SOAPAction: '""',
+  };
+
+  let res: Response;
+  try {
+    res = await fetch(url, { method: "POST", headers, body: soapEnvelope });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return {
+      sucesso: false,
+      paciente: null,
+      mensagem: `Erro de conexão com o serviço CNS: ${msg}`,
+    };
+  }
+
+  const responseText = await res.text();
+  if (!res.ok) {
+    return {
+      sucesso: false,
+      paciente: null,
+      mensagem: `HTTP ${res.status}: ${responseText.slice(0, 500)}`,
+    };
+  }
+  const fault = parseSoapFault(responseText);
+  if (fault) return { sucesso: false, paciente: null, mensagem: fault };
+  const bodyXml = extractSoapBody(responseText);
+  if (!bodyXml) {
+    return {
+      sucesso: false,
+      paciente: null,
+      mensagem: "Resposta SOAP inválida: Body não encontrado.",
+    };
+  }
+
+  const responseTag =
+    bodyXml.match(
+      /<PesquisarPacientePorNomeNomeMaeResponse[^>]*>([\s\S]*?)<\/PesquisarPacientePorNomeNomeMaeResponse>/i,
+    ) ?? bodyXml.match(/<return[^>]*>([\s\S]*?)<\/return>/i);
+  const inner = responseTag ? responseTag[1].trim() : bodyXml;
+  const paciente = parsePacienteFromBody(inner);
+  if (!hasPacienteMinimo(paciente)) {
+    return {
+      sucesso: false,
+      paciente: null,
+      mensagem:
+        "Cidadão não encontrado na base federal para nome e nome da mãe informados.",
+    };
+  }
+  return { sucesso: true, paciente };
 }
