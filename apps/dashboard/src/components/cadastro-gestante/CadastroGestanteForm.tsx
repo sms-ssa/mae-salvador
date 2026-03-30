@@ -74,6 +74,11 @@ export function CadastroGestanteForm() {
             <StepHeader etapa={etapa} />
 
             <form onSubmit={handleSubmit} className="space-y-6">
+              {erros.notificacao && (
+                <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">
+                  {erros.notificacao}
+                </p>
+              )}
               {etapa === 1 && (
                 <StepDadosPessoais
                   form={form}
@@ -113,11 +118,6 @@ export function CadastroGestanteForm() {
                 />
               )}
 
-              {erros.notificacao && (
-                <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">
-                  {erros.notificacao}
-                </p>
-              )}
               {erros.envio && (
                 <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">
                   {erros.envio}

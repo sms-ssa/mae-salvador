@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Pool } from "pg";
+import { resolveTipoLogradouroParaCadastro } from "@/lib/logradouro-type-mapper";
 
 let _esusPool: Pool | null = null;
 
@@ -63,11 +64,19 @@ export async function GET(req: NextRequest) {
         { status: 404 },
       );
     }
+    const nomeTipoRaw = String(row.tipo_logradouro ?? "").trim();
+    const nomeLogradouroRaw = String(row.logradouro ?? "").trim();
+    const tipoCanonico =
+      resolveTipoLogradouroParaCadastro({
+        nomeTipoLogradouro: nomeTipoRaw,
+        nomeLogradouro: nomeLogradouroRaw,
+      }) ?? nomeTipoRaw;
+
     return NextResponse.json({
       ok: true,
       cep: String(row.cep ?? "").trim(),
-      tipoLogradouro: String(row.tipo_logradouro ?? "").trim(),
-      logradouro: String(row.logradouro ?? "").trim(),
+      tipoLogradouro: tipoCanonico,
+      logradouro: nomeLogradouroRaw,
       bairro: String(row.bairro ?? "").trim(),
       localidade: String(row.localidade ?? "").trim(),
       uf: String(row.uf ?? "").trim(),

@@ -450,7 +450,7 @@ export default function PesquisaCidadaoPage() {
             }),
           );
         } catch {}
-        router.push("/gestante/cadastrar?fromDados=1");
+        router.push("/gestante/cadastrar?fromDados=1&naoEncontrado=1");
       }
     } catch {
       setNotificacao(

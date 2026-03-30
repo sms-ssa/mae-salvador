@@ -18,6 +18,12 @@ import {
   isDddValido,
   caracteresEnderecoValidos,
 } from "../validators/validacoesCadastroGestante";
+import {
+  formatTipoLogradouroLabel,
+  getCadSusTiposLogradouroOrdenados,
+} from "@/lib/logradouro-type-mapper";
+
+const TIPOS_LOGRADOURO_CADSUS = getCadSusTiposLogradouroOrdenados();
 
 interface StepContatoEnderecoProps {
   form: FormCadastroGestante;
@@ -359,12 +365,12 @@ export function StepContatoEndereco({
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Rua">Rua</SelectItem>
-                  <SelectItem value="Avenida">Avenida</SelectItem>
-                  <SelectItem value="Praça">Praça</SelectItem>
-                  <SelectItem value="Travessa">Travessa</SelectItem>
-                  <SelectItem value="Outro">Outro</SelectItem>
+                <SelectContent className="max-h-[min(320px,50vh)]">
+                  {TIPOS_LOGRADOURO_CADSUS.map((valor) => (
+                    <SelectItem key={valor} value={valor}>
+                      {formatTipoLogradouroLabel(valor)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

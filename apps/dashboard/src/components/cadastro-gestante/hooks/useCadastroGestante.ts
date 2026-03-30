@@ -3,6 +3,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { mapPacienteBaseFederalToDadosCadastro } from "@mae-salvador/shared";
+import {
+  isTipoLogradouroCadSusCanonico,
+  tipoLogradouroTextoParaCanonicoFormulario,
+} from "@/lib/logradouro-type-mapper";
 import { validarCPF } from "@/lib/validacoes-login";
 import {
   type FormCadastroGestante,
@@ -184,27 +188,7 @@ function normalizeOrientacaoSexualForSelect(value: unknown): string {
 }
 
 function normalizeTipoLogradouroForSelect(value: unknown): string {
-  const s =
-    typeof value === "string" ? value : value != null ? String(value) : "";
-  if (!s.trim()) return "";
-  const v = s
-    .trim()
-    .toUpperCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-  if (v === "RUA") return "Rua";
-  if (v === "AV" || v === "AVENIDA") return "Avenida";
-  if (v === "PRACA" || v === "PCA") return "Praça";
-  if (
-    v === "TRAVESSA" ||
-    v === "TV" ||
-    v === "TRV" ||
-    v === "TR" ||
-    v.includes("TRAV")
-  ) {
-    return "Travessa";
-  }
-  return "Outro";
+  return tipoLogradouroTextoParaCanonicoFormulario(value);
 }
 
 function isMunicipioCodigo(value: unknown): boolean {
@@ -435,6 +419,7 @@ export function useCadastroGestante() {
     if (typeof window === "undefined") return;
     const fromCns = searchParams.get("fromCns") === "1";
     const fromDados = searchParams.get("fromDados") === "1";
+    const naoEncontrado = searchParams.get("naoEncontrado") === "1";
     if (fromCns) {
       const raw = sessionStorage.getItem(CNS_PACIENTE_KEY);
       if (!raw) return;
@@ -547,6 +532,11 @@ export function useCadastroGestante() {
       return;
     }
     if (fromDados) {
+      if (naoEncontrado) {
+        setErroNotificacao(
+          "Cidadão(ã) não localizado(a) no eSUS PEC nem no CadSUS. Realize o cadastro manual.",
+        );
+      }
       const raw = sessionStorage.getItem(DADOS_PACIENTE_BUSCA_ALT_KEY);
       if (!raw) return;
       try {
@@ -686,19 +676,26 @@ export function useCadastroGestante() {
         const logradouro = (data.logradouro ?? "").trim();
         const bairro = (data.bairro ?? "").trim();
         const localidade = (data.localidade ?? "").trim();
-        setForm((prev) => ({
-          ...prev,
-          tipoLogradouro: force
-            ? tipoLogradouroNorm
-            : prev.tipoLogradouro || tipoLogradouroNorm,
-          logradouro: force ? logradouro : prev.logradouro || logradouro,
-          bairro: force ? bairro : prev.bairro || bairro,
-          municipio: force
-            ? localidade
-            : isMunicipioCodigo(prev.municipio)
+        setForm((prev) => {
+          const prevTipo = (prev.tipoLogradouro ?? "").trim();
+          const prevTipoValidoCadSus =
+            prevTipo && isTipoLogradouroCadSusCanonico(prevTipo);
+          const tipoFinal =
+            force || !prevTipoValidoCadSus
+              ? tipoLogradouroNorm || prevTipo
+              : prevTipo || tipoLogradouroNorm;
+          return {
+            ...prev,
+            tipoLogradouro: tipoFinal,
+            logradouro: force ? logradouro : prev.logradouro || logradouro,
+            bairro: force ? bairro : prev.bairro || bairro,
+            municipio: force
               ? localidade
-              : prev.municipio || localidade,
-        }));
+              : isMunicipioCodigo(prev.municipio)
+                ? localidade
+                : prev.municipio || localidade,
+          };
+        });
       } catch {
         setErroCep(
           "CEP não localizado. Entre em contato com a unidade de saúde.",
@@ -714,15 +711,14 @@ export function useCadastroGestante() {
     const digits = form.cep.replace(/\D/g, "").trim();
     if (digits.length !== 8) return;
     if (lastAutoCepLookupRef.current === digits) return;
-    // Mesmo que logradouro/bairro venham do e-SUS, queremos completar ao menos
-    // tipoLogradouro e município a partir do CEP (sem sobrescrever o que já existe).
-    if (
+    // Completar tipo e município pelo CEP quando ainda faltam ou quando o tipo é legado ("Outro")
+    // ou não é canônico CadSUS — senão "Outro" truthy impedia a busca automática.
+    const tipoJaOk =
       form.tipoLogradouro &&
-      form.municipio &&
-      !isMunicipioCodigo(form.municipio)
-    ) {
-      return;
-    }
+      isTipoLogradouroCadSusCanonico(form.tipoLogradouro);
+    const municipioOk =
+      form.municipio && !isMunicipioCodigo(form.municipio);
+    if (tipoJaOk && municipioOk) return;
     lastAutoCepLookupRef.current = digits;
     void pesquisarCep({ force: false });
   }, [
