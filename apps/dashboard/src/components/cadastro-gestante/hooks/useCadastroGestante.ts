@@ -116,7 +116,15 @@ function normalizeSexoForSelect(value: unknown): string {
     typeof value === "string" ? value : value != null ? String(value) : "";
   if (!s.trim()) return "";
   const v = s.trim().toUpperCase();
-  return SEXO_SELECT_VALUES.includes(v) ? v : "";
+  if (SEXO_SELECT_VALUES.includes(v)) return v;
+  // CADWEB/SOAP costuma retornar sexo abreviado ("M"/"F").
+  if (v === "M") return "MASCULINO";
+  if (v === "F") return "FEMININO";
+  // Variações textuais defensivas.
+  if (v.startsWith("MASC")) return "MASCULINO";
+  if (v.startsWith("FEM")) return "FEMININO";
+  if (v.startsWith("IND")) return "INDETERMINADO";
+  return "";
 }
 
 function normalizeIdentidadeGeneroForSelect(value: unknown): string {
@@ -197,6 +205,14 @@ function normalizeTipoLogradouroForSelect(value: unknown): string {
     return "Travessa";
   }
   return "Outro";
+}
+
+function isMunicipioCodigo(value: unknown): boolean {
+  const s =
+    typeof value === "string" ? value : value != null ? String(value) : "";
+  const digits = s.replace(/\D/g, "");
+  // Ex.: código IBGE (6+ dígitos) vindo do CADWEB no lugar do nome do município.
+  return digits.length >= 6 && digits === s.trim();
 }
 
 function formatCpfValue(value: string): string {
@@ -677,7 +693,11 @@ export function useCadastroGestante() {
             : prev.tipoLogradouro || tipoLogradouroNorm,
           logradouro: force ? logradouro : prev.logradouro || logradouro,
           bairro: force ? bairro : prev.bairro || bairro,
-          municipio: force ? localidade : prev.municipio || localidade,
+          municipio: force
+            ? localidade
+            : isMunicipioCodigo(prev.municipio)
+              ? localidade
+              : prev.municipio || localidade,
         }));
       } catch {
         setErroCep(
@@ -696,7 +716,13 @@ export function useCadastroGestante() {
     if (lastAutoCepLookupRef.current === digits) return;
     // Mesmo que logradouro/bairro venham do e-SUS, queremos completar ao menos
     // tipoLogradouro e município a partir do CEP (sem sobrescrever o que já existe).
-    if (form.tipoLogradouro && form.municipio) return;
+    if (
+      form.tipoLogradouro &&
+      form.municipio &&
+      !isMunicipioCodigo(form.municipio)
+    ) {
+      return;
+    }
     lastAutoCepLookupRef.current = digits;
     void pesquisarCep({ force: false });
   }, [
