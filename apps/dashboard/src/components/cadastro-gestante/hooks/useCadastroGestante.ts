@@ -544,13 +544,18 @@ export function useCadastroGestante() {
           nomeCompleto?: string;
           nomeMae?: string;
           dataNascimento?: string;
+          cns?: string;
         };
         sessionStorage.removeItem(DADOS_PACIENTE_BUSCA_ALT_KEY);
+        const cnsDigits = dados.cns
+          ? String(dados.cns).replace(/\D/g, "").slice(0, 15)
+          : "";
         setForm((prev) => ({
           ...prev,
           nomeCompleto: dados.nomeCompleto ?? prev.nomeCompleto,
           nomeMae: dados.nomeMae ?? prev.nomeMae,
           dataNascimento: dados.dataNascimento ?? prev.dataNascimento,
+          cns: cnsDigits || prev.cns,
         }));
       } catch {
         sessionStorage.removeItem(DADOS_PACIENTE_BUSCA_ALT_KEY);

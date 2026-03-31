@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
         paciente: null,
         fontesIndisponiveis: true,
         mensagem:
-          "No momento, não foi possível acessar o e-SUS PEC e o CadWeb. Verifique sua conexão e tente novamente em alguns minutos.",
+          "No momento não foi possível conectar com o eSUS PEC e o CadSUS. Tente novamente mais tarde!",
       });
     }
     return NextResponse.json({

@@ -194,6 +194,15 @@ export default function PesquisaCidadaoPage() {
       // associado ao CPF e o campo de CNS esteja vazio).
       const res = await fetch(`/api/cns/buscar?cns=${encodeURIComponent(dig)}`);
       const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setNotificacao(
+          data?.mensagem ??
+            "Erro ao consultar as bases. Tente novamente.",
+        );
+        setBuscaAlternativa("cns");
+        setCarregando(false);
+        return;
+      }
       if (isFontesIndisponiveis(data)) {
         setNotificacao(
           data?.mensagem ??
@@ -268,16 +277,21 @@ export default function PesquisaCidadaoPage() {
         setCarregando(false);
         return;
       }
-      setNotificacao(
-        data?.mensagem ??
-          "Cidadão(ã) não localizado(a) no e-SUS PEC nem no CadWeb pelo CNS informado.",
-      );
-      setBuscaAlternativa("dados");
+      // CNS não localizado no e-SUS nem no CadWeb: cadastro manual (não abrir busca por dados).
+      try {
+        sessionStorage.setItem(
+          "dadosPacienteBuscaAlt",
+          JSON.stringify({ cns: dig }),
+        );
+      } catch {}
+      router.push("/gestante/cadastrar?fromDados=1&naoEncontrado=1");
+      setCarregando(false);
+      return;
     } catch {
       setNotificacao(
         "Não foi possível concluir a busca por CNS neste momento. Tente novamente.",
       );
-      setBuscaAlternativa("dados");
+      setBuscaAlternativa("cns");
     }
     setCarregando(false);
   }
